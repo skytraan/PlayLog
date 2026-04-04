@@ -1,2 +1,2 @@
-# PlayLog.
+# PlayLog
 log your plays.
