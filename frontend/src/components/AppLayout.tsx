@@ -53,6 +53,9 @@ export default function AppLayout({ user }: AppLayoutProps) {
                 onSwitch={setActiveProfile}
               />
               <span className="text-sm text-muted-foreground">{user.name}</span>
+              <div className="flex items-center justify-center rounded-full bg-secondary text-base w-8 h-8 border border-border">
+                👤
+              </div>
             </div>
           </div>
         </div>

@@ -91,7 +91,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
 
           <button
             type="submit"
-            className="w-full mt-2 px-4 py-2 text-sm font-medium rounded-md bg-foreground text-primary-foreground hover:opacity-90 transition-opacity"
+            className="w-full mt-2 px-4 py-2 text-sm font-medium rounded-md bg-foreground text-background hover:opacity-90 transition-opacity"
           >
             Get started
           </button>

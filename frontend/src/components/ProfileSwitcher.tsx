@@ -29,7 +29,7 @@ export function ProfileSwitcher({ profiles, activeProfile, onSwitch }: ProfileSw
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md bg-foreground text-primary-foreground transition-colors hover:opacity-90 whitespace-nowrap">
+      <DropdownMenuTrigger className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md bg-secondary text-foreground border border-border transition-colors hover:bg-accent whitespace-nowrap">
         <span>{sportIcons[activeProfile.sport]}</span>
         <span>{activeProfile.name}</span>
         <ChevronDown className="h-3.5 w-3.5 opacity-70" />
