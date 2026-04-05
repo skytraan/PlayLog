@@ -65,9 +65,8 @@ export const TENNIS_SKILLS = [
   "Serve",
   "Forehand",
   "Backhand",
-  "Net Play",
+  "Volley",
   "Footwork",
-  "Strategy",
 ];
 
 export const GOLF_SKILLS = [

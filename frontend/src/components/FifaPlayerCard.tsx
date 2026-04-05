@@ -142,7 +142,7 @@ export function FifaPlayerCard({ name, photoUrl, ratings }: FifaPlayerCardProps)
           {/* Player name */}
           <div className="text-center mb-3">
             <span className="text-sm font-black uppercase tracking-widest" style={{ color: s.textColor, letterSpacing: "0.12em" }}>
-              {(name.split(" ").pop() ?? name).toUpperCase()}
+              {(name.split(" ")[0] ?? name).toUpperCase()}
             </span>
           </div>
 
