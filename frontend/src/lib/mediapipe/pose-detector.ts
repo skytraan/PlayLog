@@ -41,7 +41,7 @@ export async function initPoseLandmarker(): Promise<PoseLandmarker> {
     _landmarker = await PoseLandmarker.createFromOptions(vision, {
       baseOptions: {
         modelAssetPath: MODEL_URL,
-        delegate: "GPU",
+        delegate: "CPU",
       },
       runningMode: "VIDEO",
       numPoses: 1,
@@ -109,7 +109,8 @@ export async function detectFromVideoFrame(
 export async function sampleVideoFrames(
   video: HTMLVideoElement,
   fps = 10,
-  onProgress?: (progress: number) => void
+  onProgress?: (progress: number) => void,
+  maxFrames = 15
 ): Promise<ValidatedPoseFrame[]> {
   const duration = video.duration;
   if (!Number.isFinite(duration) || duration <= 0) {
@@ -117,7 +118,9 @@ export async function sampleVideoFrames(
   }
 
   const intervalMs = 1000 / fps;
-  const totalFrames = Math.floor((duration * 1000) / intervalMs);
+  const rawFrames = Math.floor((duration * 1000) / intervalMs);
+  // Cap total frames to keep processing time bounded regardless of clip length
+  const totalFrames = Math.min(rawFrames, maxFrames);
   const frames: ValidatedPoseFrame[] = [];
 
   for (let i = 0; i < totalFrames; i++) {

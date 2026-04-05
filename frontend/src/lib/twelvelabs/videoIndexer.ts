@@ -4,38 +4,21 @@ import type { Id } from "../../../../convex/_generated/dataModel";
 import type { TaskPollResult, VideoIndexResult } from "./types";
 
 /**
- * Upload a video blob to Convex storage, then trigger TwelveLabs indexing.
- * Returns the TwelveLabs task ID along with the session/analysis IDs.
+ * Trigger TwelveLabs indexing for a video already in Convex storage.
+ * The video is fetched directly by the indexVideo action via its storage URL.
  */
 export async function uploadAndIndexVideo(
   convex: ConvexReactClient,
   params: {
-    videoBlob: Blob;
     sessionId: Id<"sessions">;
     analysisId: Id<"analyses">;
     sport: string;
   }
 ): Promise<VideoIndexResult> {
-  // Step 1: get a short-lived upload URL from Convex storage
-  const uploadUrl = await convex.mutation(api.storage.generateUploadUrl, {});
-
-  // Step 2: POST the video blob directly to Convex storage
-  const uploadRes = await fetch(uploadUrl, {
-    method: "POST",
-    headers: { "Content-Type": params.videoBlob.type },
-    body: params.videoBlob,
-  });
-
-  if (!uploadRes.ok) {
-    throw new Error(`Video upload failed: ${uploadRes.statusText}`);
-  }
-
-  // Step 3: get or create a TwelveLabs index for this sport
   const indexId = await convex.action(api.twelvelabs.getOrCreateIndex, {
     sport: params.sport,
   });
 
-  // Step 4: trigger TwelveLabs indexing — returns the task ID
   const taskId = await convex.action(api.twelvelabs.indexVideo, {
     sessionId: params.sessionId,
     analysisId: params.analysisId,
@@ -51,7 +34,6 @@ export async function uploadAndIndexVideo(
 
 /**
  * Poll TwelveLabs task status until indexing completes or fails.
- * Resolves with the final status and video ID when done.
  */
 export async function pollUntilReady(
   convex: ConvexReactClient,
@@ -64,7 +46,7 @@ export async function pollUntilReady(
   }
 ): Promise<TaskPollResult> {
   const intervalMs = params.intervalMs ?? 8000;
-  const timeoutMs = params.timeoutMs ?? 300_000; // 5 min default
+  const timeoutMs = params.timeoutMs ?? 300_000;
   const deadline = Date.now() + timeoutMs;
 
   while (Date.now() < deadline) {
