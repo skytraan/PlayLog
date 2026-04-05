@@ -1,5 +1,21 @@
 import { v } from "convex/values";
-import { query } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
+
+export const saveMessage = mutation({
+  args: {
+    sessionId: v.id("sessions"),
+    role: v.union(v.literal("user"), v.literal("model")),
+    content: v.string(),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.insert("messages", {
+      sessionId: args.sessionId,
+      role: args.role,
+      content: args.content,
+      createdAt: Date.now(),
+    });
+  },
+});
 
 export const getMessages = query({
   args: {
