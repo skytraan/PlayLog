@@ -190,6 +190,9 @@ export const AnalysisResultSchema = z.object({
   // Key frames only — one per phase transition, not every raw frame
   keyFrames: z.array(FrameMetricsSchema),
 
+  /** Weighted average score across all key frames (0–100) */
+  overallScore: z.number().min(0).max(100),
+
   summary: z.object({
     avgElbowAngleAtImpact: z.number(),
     avgKneeAngleAtLoad: z.number(),

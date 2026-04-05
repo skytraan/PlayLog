@@ -11,6 +11,7 @@ import {
 interface DataPoint {
   date: string;
   ovr: number;
+  label?: string;
 }
 
 interface ProgressTimelineProps {
@@ -29,7 +30,7 @@ const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?:
   if (active && payload && payload.length) {
     return (
       <div className="bg-card border border-border rounded-md px-3 py-2 text-sm shadow-md">
-        <p className="text-muted-foreground">{label}</p>
+        <p className="text-muted-foreground text-xs">{label}</p>
         <p className="font-semibold text-foreground">OVR {payload[0].value}</p>
       </div>
     );
@@ -59,7 +60,7 @@ export function ProgressTimeline({ data = [] }: ProgressTimelineProps) {
                 axisLine={false}
               />
               <YAxis
-                domain={[0, 100]}
+                domain={([min, max]: [number, number]) => [Math.max(0, Math.floor(min / 10) * 10 - 10), Math.min(100, Math.ceil(max / 10) * 10 + 10)]}
                 tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
                 tickLine={false}
                 axisLine={false}
