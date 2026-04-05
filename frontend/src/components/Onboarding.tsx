@@ -81,7 +81,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
     <div className="min-h-screen bg-background flex flex-col">
       {/* Top nav */}
       <div className="px-8 py-5 border-b border-border">
-        <img src="/logo.png" alt="PlayLog" className="h-8 w-auto" />
+        <img src="/logo.png" alt="PlayLog" className="h-14 w-auto" />
       </div>
 
       <div className="flex flex-1">
