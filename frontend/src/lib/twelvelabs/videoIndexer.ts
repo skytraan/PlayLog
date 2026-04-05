@@ -63,7 +63,7 @@ export async function pollUntilReady(
     timeoutMs?: number;
   }
 ): Promise<TaskPollResult> {
-  const intervalMs = params.intervalMs ?? 3000;
+  const intervalMs = params.intervalMs ?? 8000;
   const timeoutMs = params.timeoutMs ?? 300_000; // 5 min default
   const deadline = Date.now() + timeoutMs;
 

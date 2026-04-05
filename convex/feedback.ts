@@ -9,7 +9,6 @@ export const saveFeedback = mutation({
     strengths: v.array(v.string()),
     improvements: v.array(v.string()),
     drills: v.array(v.string()),
-    rawResponse: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const session = await ctx.db.get(args.sessionId);
@@ -22,7 +21,6 @@ export const saveFeedback = mutation({
       strengths: args.strengths,
       improvements: args.improvements,
       drills: args.drills,
-      rawResponse: args.rawResponse,
       createdAt: Date.now(),
     });
   },
@@ -34,14 +32,12 @@ export const getFeedback = query({
   },
   handler: async (ctx, args) => {
     const feedback = await ctx.db.get(args.feedbackId);
-    if (!feedback) {
-      throw new ConvexError(`Feedback ${args.feedbackId} not found`);
-    }
+    if (!feedback) throw new ConvexError(`Feedback ${args.feedbackId} not found`);
     return feedback;
   },
 });
 
-export const getFeedbackForSession = query({
+export const getLatestFeedback = query({
   args: {
     sessionId: v.id("sessions"),
   },
@@ -49,7 +45,7 @@ export const getFeedbackForSession = query({
     return await ctx.db
       .query("feedback")
       .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
-      .order("asc")
-      .collect();
+      .order("desc")
+      .first();
   },
 });

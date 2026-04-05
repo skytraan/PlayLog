@@ -4,7 +4,6 @@ import { mutation, query } from "./_generated/server";
 export const createAnalysis = mutation({
   args: {
     sessionId: v.id("sessions"),
-    promptId: v.optional(v.id("prompts")),
   },
   handler: async (ctx, args) => {
     const session = await ctx.db.get(args.sessionId);
@@ -12,7 +11,6 @@ export const createAnalysis = mutation({
 
     return await ctx.db.insert("analyses", {
       sessionId: args.sessionId,
-      promptId: args.promptId,
       createdAt: Date.now(),
     });
   },
@@ -24,18 +22,6 @@ export const updateAnalysis = mutation({
     twelveLabsIndexId: v.optional(v.string()),
     twelveLabsVideoId: v.optional(v.string()),
     twelveLabsResult: v.optional(v.string()),
-    poseLandmarks: v.optional(
-      v.array(
-        v.array(
-          v.object({
-            x: v.number(),
-            y: v.number(),
-            z: v.number(),
-            visibility: v.number(),
-          })
-        )
-      )
-    ),
     poseAnalysis: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -56,14 +42,12 @@ export const getAnalysis = query({
   },
   handler: async (ctx, args) => {
     const analysis = await ctx.db.get(args.analysisId);
-    if (!analysis) {
-      throw new ConvexError(`Analysis ${args.analysisId} not found`);
-    }
+    if (!analysis) throw new ConvexError(`Analysis ${args.analysisId} not found`);
     return analysis;
   },
 });
 
-export const getAnalysisForSession = query({
+export const getLatestAnalysis = query({
   args: {
     sessionId: v.id("sessions"),
   },
@@ -72,6 +56,6 @@ export const getAnalysisForSession = query({
       .query("analyses")
       .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
       .order("desc")
-      .collect();
+      .first();
   },
 });

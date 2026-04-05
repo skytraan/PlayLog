@@ -29,3 +29,20 @@ export const getMessages = query({
       .collect();
   },
 });
+
+// Fetch only the most recent N messages — use this inside actions to avoid
+// pulling the full history on every chat turn.
+export const getRecentMessages = query({
+  args: {
+    sessionId: v.id("sessions"),
+    limit: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const msgs = await ctx.db
+      .query("messages")
+      .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
+      .order("desc")
+      .take(args.limit);
+    return msgs.reverse();
+  },
+});

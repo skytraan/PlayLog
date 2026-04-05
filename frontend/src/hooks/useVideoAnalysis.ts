@@ -124,7 +124,6 @@ export function useVideoAnalysis({
               const poseResult = scorer(frames, 5, "right");
               await updateAnalysis({
                 analysisId: newAnalysisId,
-                poseLandmarks: frames.map((f) => f.landmarks),
                 poseAnalysis: JSON.stringify(poseResult),
               });
             }
