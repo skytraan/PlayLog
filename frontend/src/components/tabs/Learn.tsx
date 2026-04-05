@@ -1,26 +1,46 @@
-import { useState } from "react";
-import { Sport, AnalysisStatus, ChatMessage } from "@/types/playlog";
+import { useRef } from "react";
+import { useAction } from "convex/react";
+import { api } from "../../../../convex/_generated/api";
+import type { Id } from "../../../../convex/_generated/dataModel";
+import { Sport, ChatMessage } from "@/types/playlog";
 import { SessionLibrary } from "@/components/SessionLibrary";
 import { UploadArea } from "@/components/UploadArea";
 import { ChatInterface } from "@/components/ChatInterface";
+import { useVideoAnalysis } from "@/hooks/useVideoAnalysis";
+import { useState } from "react";
 
 interface LearnProps {
   sport: Sport;
+  userId: Id<"users">;
 }
 
-export function Learn({ sport }: LearnProps) {
-  const [analysisStatus, setAnalysisStatus] = useState<AnalysisStatus>("idle");
+export function Learn({ sport, userId }: LearnProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const askCoach = useAction(api.gemini.askCoach);
 
-  const handleUpload = () => {
-    setAnalysisStatus("uploading");
-    setTimeout(() => setAnalysisStatus("analyzing"), 1500);
-    setTimeout(() => setAnalysisStatus("scoring"), 4000);
-    setTimeout(() => setAnalysisStatus("ready"), 6000);
-    setTimeout(() => setAnalysisStatus("idle"), 7000);
+  const { status, error, sessionId, analyze } = useVideoAnalysis({
+    userId,
+    sport,
+    requestedSections: sport === "tennis"
+      ? ["forehand", "backhand", "serve", "footwork"]
+      : ["driving", "iron play", "short game", "putting"],
+  });
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
   };
 
-  const handleSendMessage = (content: string) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    await analyze(file);
+  };
+
+  const handleSendMessage = async (content: string) => {
+    if (!sessionId) return;
+
     const userMsg: ChatMessage = {
       id: `u-${Date.now()}`,
       role: "user",
@@ -29,21 +49,45 @@ export function Learn({ sport }: LearnProps) {
     };
     setMessages((prev) => [...prev, userMsg]);
 
-    setTimeout(() => {
-      const reply: ChatMessage = {
-        id: `a-${Date.now()}`,
-        role: "assistant",
-        content:
-          "Based on your session history, I can see steady improvement in your technique. Your most recent session shows the strongest fundamentals yet — particularly in your preparation timing. Keep focusing on the areas we identified and you'll continue to see progress.",
-        timestamp: new Date().toISOString(),
-      };
-      setMessages((prev) => [...prev, reply]);
-    }, 1200);
+    try {
+      const reply = await askCoach({ sessionId, userMessage: content });
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `a-${Date.now()}`,
+          role: "assistant",
+          content: reply,
+          timestamp: new Date().toISOString(),
+        },
+      ]);
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `a-${Date.now()}`,
+          role: "assistant",
+          content: "Sorry, I couldn't process your message. Please try again.",
+          timestamp: new Date().toISOString(),
+        },
+      ]);
+    }
   };
 
   return (
     <div className="space-y-6">
-      <UploadArea status={analysisStatus} onUpload={handleUpload} />
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="video/mp4,video/quicktime,video/x-msvideo"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+
+      <UploadArea status={status} onUpload={handleUploadClick} />
+
+      {error && (
+        <p className="text-xs text-destructive px-1">{error}</p>
+      )}
 
       <SessionLibrary sessions={[]} />
 
