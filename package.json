@@ -1,0 +1,11 @@
+{
+  "name": "playlog",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "backend": "npx convex dev"
+  },
+  "devDependencies": {
+    "convex": "^1.0.0"
+  }
+}

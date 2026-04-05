@@ -5,8 +5,23 @@ Log your plays.
 
 ```
 PlayLog/
-├── frontend/   # React + Vite + TypeScript
-└── backend/    # Python + FastAPI
+├── convex/      # backend — Convex queries, mutations, schema
+└── frontend/    # React + Vite + TypeScript
+```
+
+## Backend (Convex)
+
+### Setup
+
+```bash
+npm install
+cp .env.local.example .env.local  # fill in your Convex deployment
+```
+
+### Running
+
+```bash
+npm run backend
 ```
 
 ## Frontend
@@ -20,40 +35,11 @@ PlayLog/
 ```bash
 cd frontend
 npm install
+cp .env.example .env.local  # fill in your Convex URLs
 ```
 
 ### Running
 
 ```bash
-# Development server
 npm run dev
-
-# Production build
-npm run build
-
-# Preview production build
-npm run preview
 ```
-
-## Backend
-
-### Requirements
-- Python 3.8+
-
-### Setup
-
-```bash
-cd backend
-python3 -m venv venv
-venv/bin/pip install -r requirements.txt
-```
-
-### Running
-
-```bash
-# Development server (with auto-reload)
-venv/bin/uvicorn app.main:app --reload
-```
-
-API will be available at `http://localhost:8000`
-Auto-generated docs at `http://localhost:8000/docs`
