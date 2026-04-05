@@ -49,11 +49,11 @@ export const getOrCreateIndex = action({
     const indexName = `playlog-${args.sport.toLowerCase()}`;
 
     // Check if index already exists
-    const list = (await tlFetch(`/indexes?name=${encodeURIComponent(indexName)}`)) as {
-      data: { _id: string; name: string }[];
+    const list = (await tlFetch(`/indexes?index_name=${encodeURIComponent(indexName)}`)) as {
+      data: { _id: string; index_name: string }[];
     };
 
-    const existing = list.data.find((i) => i.name === indexName);
+    const existing = list.data.find((i) => i.index_name === indexName);
     if (existing) return existing._id;
 
     // Create new index with Pegasus video understanding enabled
@@ -61,7 +61,7 @@ export const getOrCreateIndex = action({
       method: "POST",
       body: JSON.stringify({
         index_name: indexName,
-        engines: [
+        models: [
           {
             name: "pegasus1.2",
             options: ["visual", "conversation"],
