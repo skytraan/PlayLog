@@ -118,7 +118,15 @@ export function useVideoAnalysis({
 
             await analyzePose(videoEl);
             URL.revokeObjectURL(videoEl.src);
-            // Raw landmarks omitted — too large for Convex (>1 MiB).
+
+            if (frames.length > 0) {
+              const scorer = pickScorer(requestedSections);
+              const poseResult = scorer(frames, 5, "right");
+              await updateAnalysis({
+                analysisId: newAnalysisId,
+                poseAnalysis: JSON.stringify(poseResult),
+              });
+            }
           })(),
         ]);
 

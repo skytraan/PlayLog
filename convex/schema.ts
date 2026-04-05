@@ -10,21 +10,11 @@ export default defineSchema({
     createdAt: v.number(),
   }).index("by_email", ["email"]),
 
-  // Sport-specific prompt templates, one row per section
-  prompts: defineTable({
-    sport: v.string(),
-    section: v.string(), // "forehand" | "backhand" | "serve" | "volley" | "footwork"
-    name: v.string(),
-    content: v.string(),
-    createdAt: v.number(),
-  }).index("by_sport_section", ["sport", "section"]),
-
   // A session represents one user-uploaded video coaching session
   sessions: defineTable({
     userId: v.id("users"),
     sport: v.string(),
     videoStorageId: v.id("_storage"),
-    // Sections the user asked to analyze, parsed from their prompt
     requestedSections: v.array(v.string()),
     status: v.union(
       v.literal("uploading"),
@@ -36,24 +26,11 @@ export default defineSchema({
     createdAt: v.number(),
   }).index("by_user", ["userId"]),
 
-  // Analysis produced by TwelveLabs video intelligence and/or MediaPipe CV
+  // Analysis produced by TwelveLabs video intelligence and MediaPipe CV scoring
   analyses: defineTable({
     sessionId: v.id("sessions"),
-    promptId: v.optional(v.id("prompts")),
     twelveLabsIndexId: v.optional(v.string()),
     twelveLabsVideoId: v.optional(v.string()),
-    poseLandmarks: v.optional(
-      v.array(
-        v.array(
-          v.object({
-            x: v.number(),
-            y: v.number(),
-            z: v.number(),
-            visibility: v.number(),
-          })
-        )
-      )
-    ),
     twelveLabsResult: v.optional(v.string()),
     // Serialized AnalysisResult JSON from the frontend scoring pipeline
     poseAnalysis: v.optional(v.string()),
@@ -76,7 +53,6 @@ export default defineSchema({
     strengths: v.array(v.string()),
     improvements: v.array(v.string()),
     drills: v.array(v.string()),
-    rawResponse: v.optional(v.string()),
     createdAt: v.number(),
   })
     .index("by_session", ["sessionId"])
