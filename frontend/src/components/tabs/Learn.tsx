@@ -1,23 +1,16 @@
 import { useState } from "react";
 import { Sport, AnalysisStatus, ChatMessage } from "@/types/playlog";
-import { mockSessions, mockChatMessages } from "@/data/mockData";
 import { SessionLibrary } from "@/components/SessionLibrary";
 import { UploadArea } from "@/components/UploadArea";
 import { ChatInterface } from "@/components/ChatInterface";
-import { SessionDetail } from "@/components/SessionDetail";
 
 interface LearnProps {
-  profileId: string;
   sport: Sport;
 }
 
-export function Learn({ profileId, sport }: LearnProps) {
-  const sessions = mockSessions[profileId] || [];
-  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+export function Learn({ sport }: LearnProps) {
   const [analysisStatus, setAnalysisStatus] = useState<AnalysisStatus>("idle");
-  const [messages, setMessages] = useState<ChatMessage[]>(mockChatMessages);
-
-  const selectedSession = sessions.find((s) => s.id === selectedSessionId);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
 
   const handleUpload = () => {
     setAnalysisStatus("uploading");
@@ -52,17 +45,7 @@ export function Learn({ profileId, sport }: LearnProps) {
     <div className="space-y-6">
       <UploadArea status={analysisStatus} onUpload={handleUpload} />
 
-      {selectedSession ? (
-        <SessionDetail
-          session={selectedSession}
-          onBack={() => setSelectedSessionId(null)}
-        />
-      ) : (
-        <SessionLibrary
-          sessions={sessions}
-          onSelectSession={setSelectedSessionId}
-        />
-      )}
+      <SessionLibrary sessions={[]} />
 
       <ChatInterface
         messages={messages}
