@@ -150,3 +150,48 @@ function calcTrunkLean(
   const dy = shoulderMid.y - hipMid.y;
   return Math.round(Math.atan2(dx, -dy) * (180 / Math.PI));
 }
+
+// ---------------------------------------------------------------------------
+// normalizeLandmarks
+//
+// Makes a pose scale- and position-invariant so frames from different
+// distances/camera zooms can be compared against reference poses.
+//
+// Transform applied:
+//   1. Translate — subtract the hip midpoint (origin = center of hips)
+//   2. Scale — divide by shoulder width (1.0 = one shoulder-width unit)
+//
+// The result is a new landmarks array with the same 33 points, where:
+//   - Hip midpoint is at (0, 0)
+//   - Shoulder width is always 1.0
+//   - z and visibility are preserved unchanged
+// ---------------------------------------------------------------------------
+
+export function normalizeLandmarks(landmarks: PoseLandmarks): PoseLandmarks {
+  const L = LandmarkIndex;
+
+  const leftHip      = landmarks[L.LEFT_HIP];
+  const rightHip     = landmarks[L.RIGHT_HIP];
+  const leftShoulder = landmarks[L.LEFT_SHOULDER];
+  const rightShoulder = landmarks[L.RIGHT_SHOULDER];
+
+  // Origin: midpoint between hips
+  const originX = (leftHip.x + rightHip.x) / 2;
+  const originY = (leftHip.y + rightHip.y) / 2;
+
+  // Scale: Euclidean distance between shoulders
+  const shoulderWidth = Math.sqrt(
+    (rightShoulder.x - leftShoulder.x) ** 2 +
+    (rightShoulder.y - leftShoulder.y) ** 2
+  );
+
+  // Avoid division by zero if shoulders overlap (e.g. occluded frame)
+  const scale = shoulderWidth > 0 ? shoulderWidth : 1;
+
+  return landmarks.map((lm) => ({
+    x: (lm.x - originX) / scale,
+    y: (lm.y - originY) / scale,
+    z: lm.z,
+    visibility: lm.visibility,
+  })) as PoseLandmarks;
+}
