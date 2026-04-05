@@ -3,8 +3,25 @@ import { useConvex, useMutation, useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { uploadAndIndexVideo, pollUntilReady } from "../lib/twelvelabs/videoIndexer";
-import { useMediaPipe } from "./useMediaPipe";
+import { sampleVideoFrames } from "../lib/mediapipe/pose-detector";
+import { scoreForehand } from "../lib/mediapipe/scoring-guides/forehand-scorer";
+import { scoreBackhand } from "../lib/mediapipe/scoring-guides/backhand-scorer";
+import { scoreServe } from "../lib/mediapipe/scoring-guides/serve-scorer";
+import { scoreVolley } from "../lib/mediapipe/scoring-guides/volley-scorer";
+import { scoreFootwork } from "../lib/mediapipe/scoring-guides/footwork-scorer";
+import type { ValidatedPoseFrame } from "../lib/mediapipe/landmark-schema";
 import type { AnalysisStatus } from "../types/playlog";
+
+type Scorer = (frames: ValidatedPoseFrame[], fps: number, dominantHand: "left" | "right") => ReturnType<typeof scoreForehand>;
+
+function pickScorer(sections: string[]): Scorer {
+  const first = (sections[0] ?? "").toLowerCase();
+  if (first.includes("backhand")) return scoreBackhand;
+  if (first.includes("serve")) return scoreServe;
+  if (first.includes("volley")) return scoreVolley;
+  if (first.includes("footwork")) return scoreFootwork;
+  return scoreForehand;
+}
 
 interface UseVideoAnalysisParams {
   userId: Id<"users">;
@@ -38,8 +55,6 @@ export function useVideoAnalysis({
   const updateAnalysis = useMutation(api.analyses.updateAnalysis);
   const analyzeVideo = useAction(api.twelvelabs.analyzeVideo);
   const generateFeedback = useAction(api.gemini.generateFeedback);
-
-  const { analyzePose } = useMediaPipe();
 
   const analyze = useCallback(
     async (videoFile: File) => {
@@ -91,7 +106,7 @@ export function useVideoAnalysis({
             sport,
           }),
 
-          // MediaPipe: run pose estimation in-browser
+          // MediaPipe: sample frames, score technique, persist computed result
           (async () => {
             const videoEl = document.createElement("video");
             videoEl.src = URL.createObjectURL(videoFile);
@@ -101,14 +116,17 @@ export function useVideoAnalysis({
               videoEl.onerror = () => reject(new Error("Failed to load video for MediaPipe"));
             });
 
-            const landmarks = await analyzePose(videoEl);
+            const frames = await sampleVideoFrames(videoEl, 5);
             URL.revokeObjectURL(videoEl.src);
 
-            if (landmarks.length > 0) {
+            if (frames.length > 0) {
+              const scorer = pickScorer(requestedSections);
+              const poseResult = scorer(frames, 5, "right");
               await updateAnalysis({
                 analysisId: newAnalysisId,
-                poseLandmarks: landmarks,
-              } as never); // poseLandmarks added via schema
+                poseLandmarks: frames.map((f) => f.landmarks),
+                poseAnalysis: JSON.stringify(poseResult),
+              });
             }
           })(),
         ]);
@@ -168,7 +186,6 @@ Identify strengths, weaknesses, and specific drills to improve each area.`;
       updateAnalysis,
       analyzeVideo,
       generateFeedback,
-      analyzePose,
     ]
   );
 
