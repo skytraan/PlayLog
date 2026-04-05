@@ -6,24 +6,11 @@ interface ChatInterfaceProps {
   messages: ChatMessage[];
   onSend: (content: string) => void;
   sport: Sport;
+  disabled?: boolean;
+  presetPrompts?: string[];
 }
 
-const presetPrompts: Record<Sport, string[]> = {
-  tennis: [
-    "What should I work on next?",
-    "Analyze my forehand technique",
-    "Compare my last two sessions",
-    "How has my serve improved?",
-  ],
-  golf: [
-    "What should I work on next?",
-    "Analyze my driving accuracy",
-    "Compare my last two sessions",
-    "How is my short game progressing?",
-  ],
-};
-
-export function ChatInterface({ messages, onSend, sport }: ChatInterfaceProps) {
+export function ChatInterface({ messages, onSend, sport: _sport, disabled = false, presetPrompts = [] }: ChatInterfaceProps) {
   const [input, setInput] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -47,10 +34,10 @@ export function ChatInterface({ messages, onSend, sport }: ChatInterfaceProps) {
         </p>
       </div>
 
-      {messages.length === 0 && (
+      {messages.length === 0 && presetPrompts.length > 0 && (
         <div className="px-4 py-4">
           <div className="flex flex-wrap gap-2">
-            {presetPrompts[sport].map((prompt) => (
+            {presetPrompts.map((prompt) => (
               <button
                 key={prompt}
                 onClick={() => onSend(prompt)}
@@ -96,9 +83,9 @@ export function ChatInterface({ messages, onSend, sport }: ChatInterfaceProps) {
       )}
 
       <div className="border-t border-border px-4 py-3">
-        {messages.length > 0 && (
+        {messages.length > 0 && presetPrompts.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-3">
-            {presetPrompts[sport].slice(0, 3).map((prompt) => (
+            {presetPrompts.slice(0, 3).map((prompt) => (
               <button
                 key={prompt}
                 onClick={() => onSend(prompt)}
@@ -114,12 +101,13 @@ export function ChatInterface({ messages, onSend, sport }: ChatInterfaceProps) {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask about your gameplay..."
-            className="flex-1 bg-secondary rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-ring"
+            placeholder={disabled ? "Upload a video to start chatting…" : "Ask about your gameplay..."}
+            disabled={disabled}
+            className="flex-1 bg-secondary rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed"
           />
           <button
             type="submit"
-            disabled={!input.trim()}
+            disabled={disabled || !input.trim()}
             className="p-2 rounded-md bg-foreground text-background disabled:opacity-30 hover:opacity-90 transition-opacity"
           >
             <Send className="h-4 w-4" />
