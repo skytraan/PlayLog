@@ -55,6 +55,7 @@ export function useVideoAnalysis({
   const updateAnalysis = useMutation(api.analyses.updateAnalysis);
   const analyzeVideo = useAction(api.twelvelabs.analyzeVideo);
   const generateFeedback = useAction(api.gemini.generateFeedback);
+  const checkAndAwardBadges = useMutation(api.badges.checkAndAwardBadges);
 
   const analyze = useCallback(
     async (videoFile: File) => {
@@ -164,6 +165,9 @@ Identify strengths, weaknesses, and specific drills to improve each area.`;
           });
         }
 
+        // ── Step 7: Check and award badges ────────────────────────────────────
+        await checkAndAwardBadges({ userId });
+
         setStatus("ready");
       } catch (err) {
         if (abortRef.current) return;
@@ -183,6 +187,7 @@ Identify strengths, weaknesses, and specific drills to improve each area.`;
       updateAnalysis,
       analyzeVideo,
       generateFeedback,
+      checkAndAwardBadges,
     ]
   );
 

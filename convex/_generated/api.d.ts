@@ -9,6 +9,7 @@
  */
 
 import type * as analyses from "../analyses.js";
+import type * as badges from "../badges.js";
 import type * as feedback from "../feedback.js";
 import type * as gemini from "../gemini.js";
 import type * as messages from "../messages.js";
@@ -25,6 +26,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   analyses: typeof analyses;
+  badges: typeof badges;
   feedback: typeof feedback;
   gemini: typeof gemini;
   messages: typeof messages;

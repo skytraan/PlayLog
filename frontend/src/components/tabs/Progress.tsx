@@ -20,6 +20,14 @@ export function Progress({ userId, userName }: ProgressProps) {
   const sessions = rawSessions ?? [];
   const totalSessions = sessions.length;
 
+  const earnedBadges = (useQuery(api.badges.getUserBadges, { userId }) ?? []).map((b) => ({
+    id: b.badgeId,
+    name: b.badgeId,
+    description: "",
+    icon: "",
+    earnedDate: new Date(b.earnedAt).toISOString(),
+  }));
+
   // Map MediaPipe technique names to rating keys
   const TECHNIQUE_TO_KEY: Record<string, keyof typeof fifaRatings> = {
     serve:                "serve",
@@ -108,7 +116,7 @@ export function Progress({ userId, userName }: ProgressProps) {
           setDate={card.challengeSetDate}
         />
       )}
-      <BadgeGrid earnedBadges={card.badges} />
+      <BadgeGrid earnedBadges={earnedBadges} />
     </div>
   );
 }
