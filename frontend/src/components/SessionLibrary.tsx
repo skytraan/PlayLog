@@ -29,7 +29,8 @@ export function SessionLibrary({ sessions }: SessionLibraryProps) {
     <div>
       <h3 className="text-sm font-semibold text-foreground mb-3">Sessions</h3>
       <div className="space-y-2">
-        {sessions.map((session) => {
+        {sessions.map((session, i) => {
+          const sessionNumber = sessions.length - i;
           const tier = getRatingTier(session.overallRating);
           const isOpen = openIds.has(session.id);
           return (
@@ -42,7 +43,7 @@ export function SessionLibrary({ sessions }: SessionLibraryProps) {
                 <div className="flex items-center gap-4">
                   <div className="flex flex-col">
                     <span className="text-sm font-medium text-foreground">
-                      {new Date(session.date).toLocaleDateString("en-US", {
+                      Session {sessionNumber} · {new Date(session.date).toLocaleDateString("en-US", {
                         month: "short",
                         day: "numeric",
                         year: "numeric",

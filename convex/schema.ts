@@ -34,6 +34,7 @@ export default defineSchema({
     twelveLabsResult: v.optional(v.string()),
     // Serialized AnalysisResult JSON from the frontend scoring pipeline
     poseAnalysis: v.optional(v.string()),
+    overallScore: v.optional(v.number()),
     createdAt: v.number(),
   }).index("by_session", ["sessionId"]),
 

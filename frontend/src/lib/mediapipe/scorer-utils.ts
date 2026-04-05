@@ -185,12 +185,14 @@ export function runScoringPipeline(
   ];
 
   const keyFrames: FrameMetrics[] = [];
+  const keyScores: number[] = [];
 
   for (const phase of phaseOrder) {
     const inPhase = allScored.filter((f) => f.phase === phase);
     if (inPhase.length === 0) continue;
     const best = inPhase.reduce((a, b) => (a.score.overall >= b.score.overall ? a : b));
     keyFrames.push(best.metrics);
+    keyScores.push(best.score.overall);
   }
 
   // ── Summary aggregation ───────────────────────────────────────────────────
@@ -207,6 +209,10 @@ export function runScoringPipeline(
         followThroughFrames.length
       : 0;
 
+  const overallScore = keyScores.length > 0
+    ? Math.round(keyScores.reduce((a, b) => a + b, 0) / keyScores.length)
+    : 0;
+
   return {
     sport: "tennis",
     technique,
@@ -214,6 +220,7 @@ export function runScoringPipeline(
     fps,
     totalFrames: frames.length,
     keyFrames,
+    overallScore,
     summary: {
       avgElbowAngleAtImpact:      Math.round(avg(impactFrames.map((f) => f.metrics.elbowAngle))),
       avgKneeAngleAtLoad:         Math.round(avg(loadFrames.map((f) => f.metrics.kneeAngle))),

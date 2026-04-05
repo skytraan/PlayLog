@@ -95,12 +95,23 @@ export const listSessionsWithFeedback = query({
 
     return await Promise.all(
       sessions.map(async (session) => {
-        const feedback = await ctx.db
-          .query("feedback")
-          .withIndex("by_session", (q) => q.eq("sessionId", session._id))
-          .order("desc")
-          .first();
-        return { session, feedback: feedback ?? null };
+        const [feedback, analysis] = await Promise.all([
+          ctx.db
+            .query("feedback")
+            .withIndex("by_session", (q) => q.eq("sessionId", session._id))
+            .order("desc")
+            .first(),
+          ctx.db
+            .query("analyses")
+            .withIndex("by_session", (q) => q.eq("sessionId", session._id))
+            .order("desc")
+            .first(),
+        ]);
+        return {
+          session,
+          feedback: feedback ?? null,
+          overallScore: analysis?.overallScore ?? null,
+        };
       })
     );
   },

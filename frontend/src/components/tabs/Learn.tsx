@@ -29,13 +29,13 @@ export function Learn({ sport, userId }: LearnProps) {
   const effectiveSessionId: Id<"sessions"> | null =
     sessionId ?? rawSessions?.[0]?.session._id ?? null;
 
-  const sessions: Session[] = (rawSessions ?? []).map(({ session, feedback }) => ({
+  const sessions: Session[] = (rawSessions ?? []).map(({ session, feedback, overallScore }) => ({
     id: session._id,
     profileId: session.userId,
     date: new Date(session.createdAt).toISOString(),
     sport: session.sport as Sport,
     durationMinutes: 0,
-    overallRating: 0,
+    overallRating: overallScore ?? 0,
     ratings: [],
     weaknesses: feedback?.improvements ?? [],
     strengths: feedback?.strengths ?? [],

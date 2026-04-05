@@ -122,6 +122,7 @@ export function useVideoAnalysis({
               await updateAnalysis({
                 analysisId: newAnalysisId,
                 poseAnalysis: JSON.stringify(poseResult),
+                overallScore: poseResult.overallScore,
               });
             }
           })(),

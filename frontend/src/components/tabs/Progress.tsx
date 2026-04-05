@@ -73,13 +73,18 @@ export function Progress({ userId, userName }: ProgressProps) {
     }
   }
 
-  const overallRating = sessions.length === 0 ? 0 : Math.round(
-    fifaRatings.serve * 0.25 +
-    fifaRatings.forehand * 0.25 +
-    fifaRatings.backhand * 0.20 +
-    fifaRatings.footwork * 0.15 +
-    fifaRatings.volley * 0.15
-  );
+  // Use the most recent MediaPipe overallScore as the OVR; fall back to
+  // the feedback-derived weighted average if no pose score exists yet.
+  const latestPoseScore = sessions.find((s) => s.overallScore != null)?.overallScore ?? null;
+  const overallRating = sessions.length === 0
+    ? 0
+    : latestPoseScore ?? Math.round(
+        fifaRatings.serve * 0.25 +
+        fifaRatings.forehand * 0.25 +
+        fifaRatings.backhand * 0.20 +
+        fifaRatings.footwork * 0.15 +
+        fifaRatings.volley * 0.15
+      );
 
   const card = {
     profileId: userId,
