@@ -81,3 +81,27 @@ export const listSessions = query({
       .collect();
   },
 });
+
+export const listSessionsWithFeedback = query({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const sessions = await ctx.db
+      .query("sessions")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .order("desc")
+      .collect();
+
+    return await Promise.all(
+      sessions.map(async (session) => {
+        const feedback = await ctx.db
+          .query("feedback")
+          .withIndex("by_session", (q) => q.eq("sessionId", session._id))
+          .order("desc")
+          .first();
+        return { session, feedback: feedback ?? null };
+      })
+    );
+  },
+});
