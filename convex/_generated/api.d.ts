@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as analyses from "../analyses.js";
 import type * as gemini from "../gemini.js";
 import type * as sessions from "../sessions.js";
 import type * as users from "../users.js";
@@ -19,6 +20,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  analyses: typeof analyses;
   gemini: typeof gemini;
   sessions: typeof sessions;
   users: typeof users;
