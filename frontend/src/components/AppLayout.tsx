@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Profile } from "@/types/playlog";
-import { mockProfiles } from "@/data/mockData";
 import { ProfileSwitcher } from "@/components/ProfileSwitcher";
 import { Learn } from "@/components/tabs/Learn";
 import { Progress } from "@/components/tabs/Progress";
@@ -11,8 +10,13 @@ interface AppLayoutProps {
 }
 
 export default function AppLayout({ user }: AppLayoutProps) {
-  const [activeProfile, setActiveProfile] = useState<Profile>(mockProfiles[0]);
   const [activeTab, setActiveTab] = useState<"learn" | "progress">("learn");
+
+  const userProfile: Profile = {
+    id: user.userId,
+    sport: user.sport,
+    name: user.sport.charAt(0).toUpperCase() + user.sport.slice(1),
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -48,9 +52,9 @@ export default function AppLayout({ user }: AppLayoutProps) {
             </div>
             <div className="flex items-center gap-3">
               <ProfileSwitcher
-                profiles={mockProfiles}
-                activeProfile={activeProfile}
-                onSwitch={setActiveProfile}
+                profiles={[userProfile]}
+                activeProfile={userProfile}
+                onSwitch={() => {}}
               />
               <span className="text-sm text-muted-foreground">{user.name}</span>
               <div className="flex items-center justify-center rounded-full bg-secondary text-base w-8 h-8 border border-border">
@@ -63,9 +67,9 @@ export default function AppLayout({ user }: AppLayoutProps) {
 
       <main className="mx-auto max-w-5xl px-4 sm:px-6 py-6">
         {activeTab === "learn" ? (
-          <Learn sport={activeProfile.sport} userId={user.userId} />
+          <Learn sport={user.sport} userId={user.userId} />
         ) : (
-          <Progress profileId={activeProfile.id} userName={user.name} />
+          <Progress userId={user.userId} userName={user.name} />
         )}
       </main>
     </div>
