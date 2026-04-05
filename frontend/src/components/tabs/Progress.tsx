@@ -95,7 +95,7 @@ export function Progress({ userId, userName }: ProgressProps) {
           <FifaPlayerCard name={userName} ratings={fifaRatings} />
         </div>
         <div className="flex-1">
-          <OvrGoal currentOvr={card.overallRating} />
+          <OvrGoal userId={userId} currentOvr={card.overallRating} />
         </div>
       </div>
 

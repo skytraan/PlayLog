@@ -47,6 +47,15 @@ export default defineSchema({
     createdAt: v.number(),
   }).index("by_session", ["sessionId"]),
 
+  // OVR goal set by a user
+  goals: defineTable({
+    userId: v.id("users"),
+    targetOvr: v.number(),
+    deadline: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_user", ["userId"]),
+
   // Badges earned by a user
   badges: defineTable({
     userId: v.id("users"),

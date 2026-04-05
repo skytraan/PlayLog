@@ -1,21 +1,31 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import type { Id } from "../../../convex/_generated/dataModel";
 import { Target, Pencil, X } from "lucide-react";
 
-interface Goal {
-  targetOvr: number;
-  deadline: string;
-}
-
 interface OvrGoalProps {
+  userId: Id<"users">;
   currentOvr: number;
 }
 
-export function OvrGoal({ currentOvr }: OvrGoalProps) {
-  const [goal, setGoal] = useState<Goal | null>(null);
+export function OvrGoal({ userId, currentOvr }: OvrGoalProps) {
+  const savedGoal = useQuery(api.goals.getGoal, { userId });
+  const saveGoal = useMutation(api.goals.setGoal);
+
   const [editing, setEditing] = useState(false);
   const [targetInput, setTargetInput] = useState("");
   const [deadlineInput, setDeadlineInput] = useState("");
   const [errors, setErrors] = useState<{ target?: string; deadline?: string }>({});
+  const [saving, setSaving] = useState(false);
+
+  // Pre-fill inputs when editing an existing goal
+  useEffect(() => {
+    if (editing && savedGoal) {
+      setTargetInput(String(savedGoal.targetOvr));
+      setDeadlineInput(savedGoal.deadline);
+    }
+  }, [editing, savedGoal]);
 
   const validate = () => {
     const newErrors: { target?: string; deadline?: string } = {};
@@ -33,23 +43,20 @@ export function OvrGoal({ currentOvr }: OvrGoalProps) {
     return newErrors;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const newErrors = validate();
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
     }
-    setGoal({ targetOvr: Number(targetInput), deadline: deadlineInput });
-    setEditing(false);
-    setErrors({});
-  };
-
-  const handleEdit = () => {
-    if (goal) {
-      setTargetInput(String(goal.targetOvr));
-      setDeadlineInput(goal.deadline);
+    setSaving(true);
+    try {
+      await saveGoal({ userId, targetOvr: Number(targetInput), deadline: deadlineInput });
+      setEditing(false);
+      setErrors({});
+    } finally {
+      setSaving(false);
     }
-    setEditing(true);
   };
 
   const handleCancel = () => {
@@ -57,13 +64,15 @@ export function OvrGoal({ currentOvr }: OvrGoalProps) {
     setErrors({});
   };
 
-  const daysLeft = goal
-    ? Math.ceil((new Date(goal.deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+  const daysLeft = savedGoal
+    ? Math.ceil((new Date(savedGoal.deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     : null;
 
-  const progress = goal
-    ? Math.min(100, Math.round(((currentOvr) / goal.targetOvr) * 100))
+  const progress = savedGoal
+    ? Math.min(100, Math.round((currentOvr / savedGoal.targetOvr) * 100))
     : 0;
+
+  if (savedGoal === undefined) return null;
 
   return (
     <div className="border border-border rounded-lg bg-card overflow-hidden">
@@ -72,15 +81,15 @@ export function OvrGoal({ currentOvr }: OvrGoalProps) {
           <Target className="h-4 w-4 text-primary" />
           <h3 className="text-sm font-semibold text-foreground">OVR Goal</h3>
         </div>
-        {goal && !editing && (
-          <button onClick={handleEdit} className="text-muted-foreground hover:text-foreground transition-colors">
+        {savedGoal && !editing && (
+          <button onClick={() => setEditing(true)} className="text-muted-foreground hover:text-foreground transition-colors">
             <Pencil className="h-3.5 w-3.5" />
           </button>
         )}
       </div>
 
       <div className="px-5 py-4">
-        {!goal && !editing && (
+        {!savedGoal && !editing && (
           <div className="text-center py-4">
             <p className="text-sm text-muted-foreground mb-3">Set a target OVR score to work towards.</p>
             <button
@@ -111,9 +120,7 @@ export function OvrGoal({ currentOvr }: OvrGoalProps) {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
-                Deadline
-              </label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Deadline</label>
               <input
                 type="date"
                 value={deadlineInput}
@@ -127,9 +134,10 @@ export function OvrGoal({ currentOvr }: OvrGoalProps) {
             <div className="flex gap-2">
               <button
                 onClick={handleSave}
-                className="flex-1 px-4 py-2 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
+                disabled={saving}
+                className="flex-1 px-4 py-2 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50"
               >
-                Save
+                {saving ? "Saving…" : "Save"}
               </button>
               <button
                 onClick={handleCancel}
@@ -141,18 +149,17 @@ export function OvrGoal({ currentOvr }: OvrGoalProps) {
           </div>
         )}
 
-        {goal && !editing && (
+        {savedGoal && !editing && (
           <div className="space-y-4">
-            {/* Target + deadline */}
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-muted-foreground">Target</p>
-                <p className="text-2xl font-bold font-mono text-foreground">{goal.targetOvr}</p>
+                <p className="text-2xl font-bold font-mono text-foreground">{savedGoal.targetOvr}</p>
               </div>
               <div className="text-right">
                 <p className="text-xs text-muted-foreground">Deadline</p>
                 <p className="text-sm font-medium text-foreground">
-                  {new Date(goal.deadline).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                  {new Date(savedGoal.deadline).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                 </p>
                 <p className={`text-xs font-medium mt-0.5 ${daysLeft !== null && daysLeft <= 7 ? "text-destructive" : "text-muted-foreground"}`}>
                   {daysLeft !== null && daysLeft > 0 ? `${daysLeft} day${daysLeft !== 1 ? "s" : ""} left` : "Deadline passed"}
@@ -160,11 +167,10 @@ export function OvrGoal({ currentOvr }: OvrGoalProps) {
               </div>
             </div>
 
-            {/* Progress bar */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-xs text-muted-foreground">Progress</span>
-                <span className="text-xs font-medium text-foreground">{currentOvr} / {goal.targetOvr}</span>
+                <span className="text-xs font-medium text-foreground">{currentOvr} / {savedGoal.targetOvr}</span>
               </div>
               <div className="h-2 bg-secondary rounded-full overflow-hidden">
                 <div

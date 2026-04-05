@@ -12,6 +12,7 @@ import type * as analyses from "../analyses.js";
 import type * as badges from "../badges.js";
 import type * as feedback from "../feedback.js";
 import type * as gemini from "../gemini.js";
+import type * as goals from "../goals.js";
 import type * as messages from "../messages.js";
 import type * as sessions from "../sessions.js";
 import type * as storage from "../storage.js";
@@ -29,6 +30,7 @@ declare const fullApi: ApiFromModules<{
   badges: typeof badges;
   feedback: typeof feedback;
   gemini: typeof gemini;
+  goals: typeof goals;
   messages: typeof messages;
   sessions: typeof sessions;
   storage: typeof storage;
