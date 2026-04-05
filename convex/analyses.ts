@@ -36,6 +36,7 @@ export const updateAnalysis = mutation({
         )
       )
     ),
+    poseAnalysis: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const analysis = await ctx.db.get(args.analysisId);
