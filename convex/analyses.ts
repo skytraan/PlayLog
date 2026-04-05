@@ -31,7 +31,7 @@ export const updateAnalysis = mutation({
 
     const { analysisId, ...fields } = args;
     const patch = Object.fromEntries(
-      Object.entries(fields).filter(([, v]) => v !== undefined)
+      Object.entries(fields).filter(([, val]) => val !== undefined)
     );
     await ctx.db.patch(analysisId, patch);
   },

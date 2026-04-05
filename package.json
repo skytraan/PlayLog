@@ -2,12 +2,19 @@
   "name": "playlog",
   "private": true,
   "version": "0.0.0",
+  "type": "module",
   "scripts": {
-    "backend": "npx convex dev"
+    "backend": "npx convex dev",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "devDependencies": {
+    "@edge-runtime/vm": "^5.0.0",
     "@types/node": "^25.5.2",
-    "convex": "^1.0.0"
+    "@vitest/coverage-v8": "^4.1.2",
+    "convex": "^1.0.0",
+    "convex-test": "^0.0.46",
+    "vitest": "^4.1.2"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1"
