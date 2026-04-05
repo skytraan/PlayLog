@@ -115,7 +115,12 @@ export function Progress({ userId, userName }: ProgressProps) {
       {/* Main row: player card left, timeline right */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         <PlayerCardComponent card={card} />
-        <ProgressTimeline data={[]} />
+        <ProgressTimeline data={
+          [...sessions].reverse().map((s, i) => ({
+            date: `Session ${i + 1}`,
+            ovr: s.overallScore ?? 0,
+          }))
+        } />
       </div>
 
       {card.activeChallenge && (

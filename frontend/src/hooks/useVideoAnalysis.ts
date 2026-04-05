@@ -3,7 +3,7 @@ import { useConvex, useMutation, useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { uploadAndIndexVideo, pollUntilReady } from "../lib/twelvelabs/videoIndexer";
-import { sampleVideoFrames } from "../lib/mediapipe/pose-detector";
+import { sampleVideoFrames, disposePoseLandmarker } from "../lib/mediapipe/pose-detector";
 import { scoreForehand } from "../lib/mediapipe/scoring-guides/forehand-scorer";
 import { scoreBackhand } from "../lib/mediapipe/scoring-guides/backhand-scorer";
 import { scoreServe } from "../lib/mediapipe/scoring-guides/serve-scorer";
@@ -105,6 +105,7 @@ export function useVideoAnalysis({
 
           // MediaPipe: sample frames, score technique, persist computed result
           (async () => {
+            disposePoseLandmarker();
             const videoEl = document.createElement("video");
             videoEl.src = URL.createObjectURL(videoFile);
             videoEl.muted = true;
