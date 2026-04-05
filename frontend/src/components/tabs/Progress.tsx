@@ -1,14 +1,16 @@
-import { mockPlayerCards } from "@/data/mockData";
+import { useQuery } from "convex/react";
+import { api } from "../../../../convex/_generated/api";
+import type { Id } from "../../../../convex/_generated/dataModel";
 import { PlayerCardComponent } from "@/components/PlayerCard";
 import { BadgeGrid } from "@/components/BadgeGrid";
 import { ActiveChallenge } from "@/components/ActiveChallenge";
 import { FifaPlayerCard } from "@/components/FifaPlayerCard";
 import { OvrGoal } from "@/components/OvrGoal";
 import { ProgressTimeline } from "@/components/ProgressTimeline";
-import { TENNIS_SKILLS } from "@/types/playlog";
+import { TENNIS_SKILLS, getLevelTitle } from "@/types/playlog";
 
 interface ProgressProps {
-  profileId: string;
+  userId: Id<"users">;
   userName: string;
 }
 
@@ -20,21 +22,23 @@ const defaultRatings = TENNIS_SKILLS.map((name) => ({
   topStrength: "",
 }));
 
-export function Progress({ profileId, userName }: ProgressProps) {
-  const mock = mockPlayerCards[profileId];
+export function Progress({ userId, userName }: ProgressProps) {
+  const rawSessions = useQuery(api.sessions.listSessionsWithFeedback, { userId });
+  const sessions = rawSessions ?? [];
+  const totalSessions = sessions.length;
 
   const card = {
-    profileId,
+    profileId: userId,
     playerName: userName,
     sport: "tennis" as const,
     overallRating: 0,
     ratings: defaultRatings,
-    level: "Beginner",
+    level: getLevelTitle(0),
     streak: 0,
     badges: [],
     activeChallenge: null,
     challengeSetDate: null,
-    totalSessions: 0,
+    totalSessions,
   };
 
   const fifaRatings = {

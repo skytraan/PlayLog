@@ -1,7 +1,7 @@
-import { useAction } from "convex/react";
+import { useAction, useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
-import { Sport, ChatMessage } from "@/types/playlog";
+import { Sport, ChatMessage, Session } from "@/types/playlog";
 import { SessionLibrary } from "@/components/SessionLibrary";
 import { UploadArea } from "@/components/UploadArea";
 import { ChatInterface } from "@/components/ChatInterface";
@@ -24,6 +24,24 @@ export function Learn({ sport, userId }: LearnProps) {
       ? ["forehand", "backhand", "serve", "footwork"]
       : ["driving", "iron play", "short game", "putting"],
   });
+
+  const rawSessions = useQuery(api.sessions.listSessionsWithFeedback, { userId });
+
+  const sessions: Session[] = (rawSessions ?? []).map(({ session, feedback }) => ({
+    id: session._id,
+    profileId: session.userId,
+    date: new Date(session.createdAt).toISOString(),
+    sport: session.sport as Sport,
+    durationMinutes: 0,
+    overallRating: 0,
+    ratings: [],
+    weaknesses: feedback?.improvements ?? [],
+    strengths: feedback?.strengths ?? [],
+    drillRecommendations: feedback?.drills ?? [],
+    nextChallenge: "",
+    challengeResult: null,
+    pegasusSummary: feedback?.summary ?? "",
+  }));
 
   const handleSendMessage = async (content: string) => {
     if (!sessionId) return;
@@ -68,7 +86,7 @@ export function Learn({ sport, userId }: LearnProps) {
         <p className="text-xs text-destructive px-1">{error}</p>
       )}
 
-      <SessionLibrary sessions={[]} />
+      <SessionLibrary sessions={sessions} />
 
       <ChatInterface
         messages={messages}
