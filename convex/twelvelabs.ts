@@ -60,7 +60,7 @@ export const getOrCreateIndex = action({
     const created = (await tlFetch("/indexes", {
       method: "POST",
       body: JSON.stringify({
-        name: indexName,
+        index_name: indexName,
         engines: [
           {
             name: "pegasus1.2",
