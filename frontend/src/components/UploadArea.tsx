@@ -1,9 +1,10 @@
+import { useRef } from "react";
 import { AnalysisStatus } from "@/types/playlog";
 import { Upload, Loader2, CheckCircle2, Video } from "lucide-react";
 
 interface UploadAreaProps {
   status: AnalysisStatus;
-  onUpload: () => void;
+  onUpload: (file: File) => void;
 }
 
 const statusLabels: Record<AnalysisStatus, string> = {
@@ -16,6 +17,7 @@ const statusLabels: Record<AnalysisStatus, string> = {
 };
 
 export function UploadArea({ status, onUpload }: UploadAreaProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const isProcessing = status !== "idle" && status !== "ready" && status !== "error";
   const isDone = status === "ready";
 
@@ -23,14 +25,26 @@ export function UploadArea({ status, onUpload }: UploadAreaProps) {
     <div className="space-y-3">
       <div className="border border-dashed border-border rounded-lg bg-card">
         {status === "idle" ? (
-          <button
-            onClick={onUpload}
-            className="w-full px-4 py-8 flex flex-col items-center gap-2 hover:bg-secondary/50 transition-colors rounded-lg"
-          >
-            <Upload className="h-5 w-5 text-muted-foreground" />
-            <span className="text-sm font-medium text-foreground">Upload session footage</span>
-            <span className="text-xs text-muted-foreground">MP4, MOV, or AVI — drag and drop or click to browse</span>
-          </button>
+          <>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="video/mp4,video/quicktime,video/x-msvideo"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) onUpload(file);
+              }}
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full px-4 py-8 flex flex-col items-center gap-2 hover:bg-secondary/50 transition-colors rounded-lg"
+            >
+              <Upload className="h-5 w-5 text-muted-foreground" />
+              <span className="text-sm font-medium text-foreground">Upload session footage</span>
+              <span className="text-xs text-muted-foreground">MP4, MOV, or AVI — drag and drop or click to browse</span>
+            </button>
+          </>
         ) : (
           <div className="px-4 py-6 flex items-center justify-center gap-3">
             {isProcessing && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
