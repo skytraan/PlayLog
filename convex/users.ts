@@ -23,7 +23,7 @@ export const createUser = mutation({
       .withIndex("by_email", (q) => q.eq("email", args.email.trim()))
       .first();
     if (existing) {
-      throw new ConvexError("an account with this email already exists");
+      return existing._id;
     }
 
     return await ctx.db.insert("users", {
