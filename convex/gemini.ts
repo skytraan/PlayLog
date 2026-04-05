@@ -3,7 +3,7 @@
 import { ConvexError, v } from "convex/values";
 import { action } from "./_generated/server";
 import { api } from "./_generated/api";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 
 const MAX_TL_CHARS = 1500;
 const MAX_HISTORY_MSGS = 6;
@@ -11,7 +11,28 @@ const MAX_HISTORY_MSGS = 6;
 function getClient() {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new ConvexError("GEMINI_API_KEY is not set");
-  return new GoogleGenerativeAI(apiKey);
+  return new GoogleGenAI({ apiKey });
+}
+
+async function withRetry<T>(fn: () => Promise<T>, maxAttempts = 3): Promise<T> {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      const msg = String(err);
+      const is429 = msg.includes("429") || msg.includes("Too Many Requests");
+      const isDailyLimit = msg.includes("PerDay") || msg.includes("per_day");
+      if (!is429 || isDailyLimit || attempt === maxAttempts) throw err;
+
+      const retryMatch = msg.match(/retry in (\d+(?:\.\d+)?)s/i);
+      const waitMs = retryMatch
+        ? Math.ceil(parseFloat(retryMatch[1])) * 1000
+        : 2 ** attempt * 5000;
+
+      await new Promise((resolve) => setTimeout(resolve, waitMs));
+    }
+  }
+  throw new ConvexError("Gemini API rate limit exceeded after retries");
 }
 
 function truncate(text: string, max: number): string {
@@ -31,16 +52,10 @@ function buildSessionContext(
   ].join("\n");
 }
 
-// Short, directive system prompt — no filler
 const COACH_SYSTEM_PROMPT = "Sports coach. Specific, actionable feedback using the video analysis. Reference timestamps. Plain language.";
 
 // ─── Actions ─────────────────────────────────────────────────────────────────
 
-/**
- * One-shot structured feedback after video analysis completes.
- * responseMimeType enforces JSON output natively — no format instructions needed
- * in the prompt, no regex parsing needed on the response.
- */
 export const generateFeedback = action({
   args: {
     sessionId: v.id("sessions"),
@@ -58,31 +73,26 @@ export const generateFeedback = action({
       analysis.twelveLabsResult ?? undefined
     );
 
-    // Prompt describes *what* to produce — not *how* to format it.
-    // Format is enforced by responseMimeType + stopSequences below.
     const prompt = `${sessionContext}
 
-Feedback fields:
-- summary: 2-3 sentence assessment
-- strengths: what the player does well (include timestamps)
-- improvements: issue + timestamp + fix
-- drills: one drill per improvement`;
+Respond with ONLY a JSON object, no markdown, no explanation:
+{"summary":"2-3 sentence assessment","strengths":["strength with timestamp"],"improvements":["issue — timestamp — fix"],"drills":["drill per improvement"]}`;
 
     let raw: string;
     try {
-      const genAI = getClient();
-      const model = genAI.getGenerativeModel({
-        model: "gemini-2.0-flash",
-        systemInstruction: COACH_SYSTEM_PROMPT,
-        generationConfig: {
-          responseMimeType: "application/json",
-          maxOutputTokens: 400,
-          temperature: 0.2,
-          stopSequences: ["\n}"],
-        },
-      });
-      const result = await model.generateContent(prompt);
-      raw = result.response.text();
+      const ai = getClient();
+      const result = await withRetry(() =>
+        ai.models.generateContent({
+          model: "gemini-3.1-flash-lite-preview",
+          contents: prompt,
+          config: {
+            systemInstruction: COACH_SYSTEM_PROMPT,
+            maxOutputTokens: 600,
+            thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+          },
+        })
+      );
+      raw = result.text ?? "";
     } catch (err) {
       throw new ConvexError(`Gemini API error: ${String(err)}`);
     }
@@ -94,9 +104,10 @@ Feedback fields:
       drills: string[];
     };
     try {
-      parsed = JSON.parse(raw);
+      const jsonMatch = raw.match(/\{[\s\S]*\}/);
+      parsed = JSON.parse(jsonMatch ? jsonMatch[0] : raw);
     } catch {
-      throw new ConvexError("Failed to parse Gemini feedback response");
+      throw new ConvexError(`Failed to parse Gemini feedback response: ${raw.slice(0, 200)}`);
     }
 
     return await ctx.runMutation(api.feedback.saveFeedback, {
@@ -110,11 +121,6 @@ Feedback fields:
   },
 });
 
-/**
- * Conversational "Ask Your Coach" action.
- * History capped at MAX_HISTORY_MSGS. When feedback exists, system context
- * is just the summary — avoids resending the full TwelveLabs result every turn.
- */
 export const askCoach = action({
   args: {
     sessionId: v.id("sessions"),
@@ -151,25 +157,24 @@ export const askCoach = action({
 
     let reply: string;
     try {
-      const genAI = getClient();
-      const model = genAI.getGenerativeModel({
-        model: "gemini-2.0-flash",
-        systemInstruction: `${COACH_SYSTEM_PROMPT}\n\n${systemContext}`,
-        generationConfig: {
+      const ai = getClient();
+      const chat = ai.chats.create({
+        model: "gemini-3.1-flash-lite-preview",
+        config: {
+          systemInstruction: `${COACH_SYSTEM_PROMPT}\n\n${systemContext}`,
           maxOutputTokens: 250,
-          temperature: 0.5,
+          thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
         },
-      });
-
-      const chat = model.startChat({
         history: history.map((msg: { role: "user" | "model"; content: string }) => ({
           role: msg.role,
           parts: [{ text: msg.content }],
         })),
       });
 
-      const result = await chat.sendMessage(args.userMessage.trim());
-      reply = result.response.text();
+      const result = await withRetry(() =>
+        chat.sendMessage({ message: args.userMessage.trim() })
+      );
+      reply = result.text ?? "";
     } catch (err) {
       throw new ConvexError(`Gemini API error: ${String(err)}`);
     }

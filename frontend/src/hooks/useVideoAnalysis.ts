@@ -95,12 +95,9 @@ export function useVideoAnalysis({
         // ── Step 2: TwelveLabs indexing + MediaPipe in parallel ───────────────
         setStatus("analyzing");
 
-        const videoBlob = new Blob([videoFile], { type: videoFile.type });
-
         const [indexResult] = await Promise.all([
-          // TwelveLabs: upload blob → index
+          // TwelveLabs: index video already in Convex storage
           uploadAndIndexVideo(convex, {
-            videoBlob,
             sessionId: newSessionId,
             analysisId: newAnalysisId,
             sport,
@@ -116,12 +113,12 @@ export function useVideoAnalysis({
               videoEl.onerror = () => reject(new Error("Failed to load video for MediaPipe"));
             });
 
-            const frames = await sampleVideoFrames(videoEl, 5);
+            const frames = await sampleVideoFrames(videoEl, 2);
             URL.revokeObjectURL(videoEl.src);
 
             if (frames.length > 0) {
               const scorer = pickScorer(requestedSections);
-              const poseResult = scorer(frames, 5, "right");
+              const poseResult = scorer(frames, 2, "right");
               await updateAnalysis({
                 analysisId: newAnalysisId,
                 poseAnalysis: JSON.stringify(poseResult),

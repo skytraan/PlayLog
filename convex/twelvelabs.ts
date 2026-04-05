@@ -65,7 +65,7 @@ export const getOrCreateIndex = action({
         models: [
           {
             model_name: "pegasus1.2",
-            options: ["visual", "audio"],
+            options: ["visual"],
           },
         ],
       }),
