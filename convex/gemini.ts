@@ -71,7 +71,7 @@ Respond with a JSON object in this exact shape:
     let raw: string;
     try {
       const genAI = getClient();
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
       const result = await model.generateContent(prompt);
       raw = result.response.text();
     } catch (err) {
@@ -147,7 +147,7 @@ export const askCoach = action({
     try {
       const genAI = getClient();
       const model = genAI.getGenerativeModel({
-        model: "gemini-1.5-flash",
+        model: "gemini-2.0-flash",
         systemInstruction: `${COACH_SYSTEM_PROMPT}\n\nSession context:\n${sessionContext}\n\n${feedbackContext}`,
       });
 

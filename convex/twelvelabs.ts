@@ -18,10 +18,11 @@ async function tlFetch(
   path: string,
   options: RequestInit = {}
 ): Promise<unknown> {
+  const isFormData = options.body instanceof FormData;
   const res = await fetch(`${BASE_URL}${path}`, {
     ...options,
     headers: {
-      "Content-Type": "application/json",
+      ...(isFormData ? {} : { "Content-Type": "application/json" }),
       "x-api-key": getApiKey(),
       ...options.headers,
     },
@@ -49,11 +50,11 @@ export const getOrCreateIndex = action({
     const indexName = `playlog-${args.sport.toLowerCase()}`;
 
     // Check if index already exists
-    const list = (await tlFetch(`/indexes?name=${encodeURIComponent(indexName)}`)) as {
-      data: { _id: string; name: string }[];
+    const list = (await tlFetch(`/indexes?index_name=${encodeURIComponent(indexName)}`)) as {
+      data: { _id: string; index_name: string }[];
     };
 
-    const existing = list.data.find((i) => i.name === indexName);
+    const existing = list.data.find((i) => i.index_name === indexName);
     if (existing) return existing._id;
 
     // Create new index with Pegasus video understanding enabled
@@ -61,10 +62,10 @@ export const getOrCreateIndex = action({
       method: "POST",
       body: JSON.stringify({
         index_name: indexName,
-        engines: [
+        models: [
           {
-            name: "pegasus1.2",
-            options: ["visual", "conversation"],
+            model_name: "pegasus1.2",
+            options: ["visual", "audio"],
           },
         ],
       }),
@@ -98,13 +99,14 @@ export const indexVideo = action({
       throw new ConvexError("Could not retrieve video URL from storage");
     }
 
-    // Submit video to TwelveLabs for indexing
+    // Submit video to TwelveLabs for indexing (requires multipart/form-data)
+    const form = new FormData();
+    form.append("index_id", args.indexId);
+    form.append("video_url", videoUrl);
+
     const task = (await tlFetch("/tasks", {
       method: "POST",
-      body: JSON.stringify({
-        index_id: args.indexId,
-        video_url: videoUrl,
-      }),
+      body: form,
     })) as { _id: string };
 
     // Persist the task/index IDs so we can poll later
@@ -176,11 +178,12 @@ export const analyzeVideo = action({
     prompt: v.string(),
   },
   handler: async (ctx, args): Promise<string> => {
-    const result = (await tlFetch("/generate/text", {
+    const result = (await tlFetch("/analyze", {
       method: "POST",
       body: JSON.stringify({
         video_id: args.videoId,
         prompt: args.prompt,
+        stream: false,
       }),
     })) as { data: string };
 

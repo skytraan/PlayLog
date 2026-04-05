@@ -101,15 +101,9 @@ export function useVideoAnalysis({
               videoEl.onerror = () => reject(new Error("Failed to load video for MediaPipe"));
             });
 
-            const landmarks = await analyzePose(videoEl);
+            await analyzePose(videoEl);
             URL.revokeObjectURL(videoEl.src);
-
-            if (landmarks.length > 0) {
-              await updateAnalysis({
-                analysisId: newAnalysisId,
-                poseLandmarks: landmarks,
-              } as never); // poseLandmarks added via schema
-            }
+            // Raw landmarks omitted — too large for Convex (>1 MiB).
           })(),
         ]);
 
