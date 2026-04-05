@@ -1,77 +1,46 @@
-import { useState } from "react";
-import { ConvexReactClient } from "convex/react";
+import { useRef } from "react";
+import { useAction } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
-import { Sport, AnalysisStatus, ChatMessage } from "@/types/playlog";
-import { UserProfile } from "@/components/Onboarding";
+import type { Id } from "../../../../convex/_generated/dataModel";
+import { Sport, ChatMessage } from "@/types/playlog";
 import { SessionLibrary } from "@/components/SessionLibrary";
 import { UploadArea } from "@/components/UploadArea";
 import { ChatInterface } from "@/components/ChatInterface";
-import { pollUntilReady } from "@/lib/twelvelabs/videoIndexer";
-
-const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
+import { useVideoAnalysis } from "@/hooks/useVideoAnalysis";
+import { useState } from "react";
 
 interface LearnProps {
   sport: Sport;
-  user: UserProfile;
+  userId: Id<"users">;
 }
 
-export function Learn({ sport, user }: LearnProps) {
-  const [analysisStatus, setAnalysisStatus] = useState<AnalysisStatus>("idle");
+export function Learn({ sport, userId }: LearnProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const askCoach = useAction(api.gemini.askCoach);
 
-  const handleUpload = async (file: File) => {
-    setAnalysisStatus("uploading");
-    try {
-      // Get or create the Convex user
-      const existing = await convex.query(api.users.getUserByEmail, { email: user.email });
-      const userId = existing
-        ? existing._id
-        : await convex.mutation(api.users.createUser, {
-            name: user.name,
-            email: user.email,
-            sports: [user.sport],
-          });
+  const { status, error, sessionId, analyze } = useVideoAnalysis({
+    userId,
+    sport,
+    requestedSections: sport === "tennis"
+      ? ["forehand", "backhand", "serve", "footwork"]
+      : ["driving", "iron play", "short game", "putting"],
+  });
 
-      // Upload video to Convex storage
-      const uploadUrl = await convex.mutation(api.storage.generateUploadUrl, {});
-      const uploadRes = await fetch(uploadUrl, {
-        method: "POST",
-        headers: { "Content-Type": file.type },
-        body: file,
-      });
-      if (!uploadRes.ok) throw new Error(`Upload failed: ${uploadRes.statusText}`);
-      const { storageId } = await uploadRes.json();
-
-      // Create session and analysis records
-      const sessionId = await convex.mutation(api.sessions.createSession, {
-        userId,
-        sport: user.sport,
-        videoStorageId: storageId,
-        requestedSections: ["technique", "footwork", "strategy"],
-      });
-      const analysisId = await convex.mutation(api.analyses.createAnalysis, { sessionId });
-
-      // Kick off TwelveLabs indexing
-      setAnalysisStatus("analyzing");
-      const indexId = await convex.action(api.twelvelabs.getOrCreateIndex, { sport: user.sport });
-      const taskId = await convex.action(api.twelvelabs.indexVideo, {
-        sessionId,
-        analysisId,
-        indexId,
-      });
-
-      // Poll until indexing completes
-      setAnalysisStatus("scoring");
-      await pollUntilReady(convex, { taskId, sessionId, analysisId });
-
-      setAnalysisStatus("ready");
-    } catch (err) {
-      console.error("Upload failed:", err);
-      setAnalysisStatus("error");
-    }
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
   };
 
-  const handleSendMessage = (content: string) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    await analyze(file);
+  };
+
+  const handleSendMessage = async (content: string) => {
+    if (!sessionId) return;
+
     const userMsg: ChatMessage = {
       id: `u-${Date.now()}`,
       role: "user",
@@ -80,21 +49,45 @@ export function Learn({ sport, user }: LearnProps) {
     };
     setMessages((prev) => [...prev, userMsg]);
 
-    setTimeout(() => {
-      const reply: ChatMessage = {
-        id: `a-${Date.now()}`,
-        role: "assistant",
-        content:
-          "Based on your session history, I can see steady improvement in your technique. Your most recent session shows the strongest fundamentals yet — particularly in your preparation timing. Keep focusing on the areas we identified and you'll continue to see progress.",
-        timestamp: new Date().toISOString(),
-      };
-      setMessages((prev) => [...prev, reply]);
-    }, 1200);
+    try {
+      const reply = await askCoach({ sessionId, userMessage: content });
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `a-${Date.now()}`,
+          role: "assistant",
+          content: reply,
+          timestamp: new Date().toISOString(),
+        },
+      ]);
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `a-${Date.now()}`,
+          role: "assistant",
+          content: "Sorry, I couldn't process your message. Please try again.",
+          timestamp: new Date().toISOString(),
+        },
+      ]);
+    }
   };
 
   return (
     <div className="space-y-6">
-      <UploadArea status={analysisStatus} onUpload={handleUpload} />
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="video/mp4,video/quicktime,video/x-msvideo"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+
+      <UploadArea status={status} onUpload={handleUploadClick} />
+
+      {error && (
+        <p className="text-xs text-destructive px-1">{error}</p>
+      )}
 
       <SessionLibrary sessions={[]} />
 

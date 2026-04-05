@@ -18,10 +18,11 @@ async function tlFetch(
   path: string,
   options: RequestInit = {}
 ): Promise<unknown> {
+  const isFormData = options.body instanceof FormData;
   const res = await fetch(`${BASE_URL}${path}`, {
     ...options,
     headers: {
-      "Content-Type": "application/json",
+      ...(isFormData ? {} : { "Content-Type": "application/json" }),
       "x-api-key": getApiKey(),
       ...options.headers,
     },
@@ -63,8 +64,8 @@ export const getOrCreateIndex = action({
         index_name: indexName,
         models: [
           {
-            name: "pegasus1.2",
-            options: ["visual", "conversation"],
+            model_name: "pegasus1.2",
+            options: ["visual", "audio"],
           },
         ],
       }),
@@ -98,13 +99,14 @@ export const indexVideo = action({
       throw new ConvexError("Could not retrieve video URL from storage");
     }
 
-    // Submit video to TwelveLabs for indexing
+    // Submit video to TwelveLabs for indexing (requires multipart/form-data)
+    const form = new FormData();
+    form.append("index_id", args.indexId);
+    form.append("video_url", videoUrl);
+
     const task = (await tlFetch("/tasks", {
       method: "POST",
-      body: JSON.stringify({
-        index_id: args.indexId,
-        video_url: videoUrl,
-      }),
+      body: form,
     })) as { _id: string };
 
     // Persist the task/index IDs so we can poll later
@@ -176,11 +178,12 @@ export const analyzeVideo = action({
     prompt: v.string(),
   },
   handler: async (ctx, args): Promise<string> => {
-    const result = (await tlFetch("/generate/text", {
+    const result = (await tlFetch("/analyze", {
       method: "POST",
       body: JSON.stringify({
         video_id: args.videoId,
         prompt: args.prompt,
+        stream: false,
       }),
     })) as { data: string };
 
