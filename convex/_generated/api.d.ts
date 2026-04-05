@@ -8,7 +8,9 @@
  * @module
  */
 
+import type * as gemini from "../gemini.js";
 import type * as sessions from "../sessions.js";
+import type * as users from "../users.js";
 
 import type {
   ApiFromModules,
@@ -17,7 +19,9 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  gemini: typeof gemini;
   sessions: typeof sessions;
+  users: typeof users;
 }>;
 
 /**
