@@ -93,3 +93,10 @@ export function getRatingTier(rating: number): "beginner" | "developing" | "prof
   if (rating >= 40) return "developing";
   return "beginner";
 }
+
+export function ratingBarColor(score: number): string {
+  if (score >= 80) return "#22c55e"; // green
+  if (score >= 60) return "#eab308"; // yellow
+  if (score >= 40) return "#f97316"; // orange
+  return "#ef4444";                  // red
+}

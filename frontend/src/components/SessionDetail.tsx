@@ -1,4 +1,4 @@
-import { Session } from "@/types/playlog";
+import { Session, ratingBarColor } from "@/types/playlog";
 import { ArrowLeft } from "lucide-react";
 
 interface SessionDetailProps {
@@ -58,8 +58,8 @@ export function SessionDetail({ session, onBack }: SessionDetailProps) {
                   </div>
                   <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-foreground rounded-full"
-                      style={{ width: `${r.score}%` }}
+                      className="h-full rounded-full"
+                      style={{ width: `${r.score}%`, backgroundColor: ratingBarColor(r.score) }}
                     />
                   </div>
                 </div>

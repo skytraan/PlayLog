@@ -1,4 +1,4 @@
-import { PlayerCard, getRatingTier, getLevelTitle } from "@/types/playlog";
+import { PlayerCard, getRatingTier, getLevelTitle, ratingBarColor } from "@/types/playlog";
 
 interface PlayerCardProps {
   card: PlayerCard;
@@ -57,8 +57,8 @@ export function PlayerCardComponent({ card }: PlayerCardProps) {
               </div>
               <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-foreground rounded-full"
-                  style={{ width: `${r.score}%` }}
+                  className="h-full rounded-full"
+                  style={{ width: `${r.score}%`, backgroundColor: ratingBarColor(r.score) }}
                 />
               </div>
             </div>

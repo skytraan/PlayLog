@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Session, getRatingTier } from "@/types/playlog";
+import { Session, getRatingTier, ratingBarColor } from "@/types/playlog";
 import { ChevronDown } from "lucide-react";
 
 interface SessionLibraryProps {
@@ -101,8 +101,8 @@ export function SessionLibrary({ sessions }: SessionLibraryProps) {
                           </div>
                           <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
                             <div
-                              className="h-full bg-foreground rounded-full"
-                              style={{ width: `${r.score}%` }}
+                              className="h-full rounded-full"
+                              style={{ width: `${r.score}%`, backgroundColor: ratingBarColor(r.score) }}
                             />
                           </div>
                         </div>
