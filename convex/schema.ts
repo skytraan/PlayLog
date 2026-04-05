@@ -2,6 +2,17 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
+  // Sport-specific prompt templates sent to TwelveLabs for video analysis
+  prompts: defineTable({
+    sport: v.string(),
+    name: v.string(),
+    // The full prompt text sent to TwelveLabs (e.g. the tennis forehand/backhand/serve/etc. template)
+    content: v.string(),
+    // Ordered list of stroke/category sections covered (e.g. ["forehand", "backhand", "serve"])
+    sections: v.array(v.string()),
+    createdAt: v.number(),
+  }).index("by_sport", ["sport"]),
+
   // A session represents one user-uploaded video coaching session
   sessions: defineTable({
     sport: v.string(),
@@ -19,6 +30,8 @@ export default defineSchema({
   // Analysis produced by TwelveLabs video intelligence and/or MediaPipe CV
   analyses: defineTable({
     sessionId: v.id("sessions"),
+    // Which prompt template was used for this analysis
+    promptId: v.optional(v.id("prompts")),
     // TwelveLabs index/video IDs for retrieval
     twelveLabsIndexId: v.optional(v.string()),
     twelveLabsVideoId: v.optional(v.string()),
