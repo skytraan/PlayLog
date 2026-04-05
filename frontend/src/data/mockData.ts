@@ -1,5 +1,16 @@
 import { Profile, Session, PlayerCard, Badge, ChatMessage } from "@/types/playlog";
 
+export const ALL_TENNIS_BADGES: Badge[] = [
+  { id: "ace-machine",   name: "Ace Machine",   description: "Serve rating above 75",                          icon: "🎯", earnedDate: null },
+  { id: "net-ninja",     name: "Net Ninja",      description: "Volley rating improves by 15+ points",           icon: "🥷", earnedDate: null },
+  { id: "hot-streak",    name: "Hot Streak",     description: "4 consecutive weeks with a session uploaded",    icon: "🔥", earnedDate: null },
+  { id: "most-improved", name: "Most Improved",  description: "Overall rating increases by 10+ in one month",  icon: "📈", earnedDate: null },
+  { id: "comeback-kid",  name: "Comeback Kid",   description: "Improve OVR after two sessions of decline",     icon: "💪", earnedDate: null },
+  { id: "sharp-shooter", name: "Sharp Shooter",  description: "Forehand rating above 80",                      icon: "🏹", earnedDate: null },
+  { id: "iron-wall",     name: "Iron Wall",       description: "Backhand rating above 80",                      icon: "🛡️", earnedDate: null },
+  { id: "speed-demon",   name: "Speed Demon",    description: "Footwork rating above 80",                      icon: "⚡", earnedDate: null },
+];
+
 export const mockProfiles: Profile[] = [
   { id: "tennis-1", sport: "tennis", name: "Tennis" },
   { id: "golf-1", sport: "golf", name: "Golf" },

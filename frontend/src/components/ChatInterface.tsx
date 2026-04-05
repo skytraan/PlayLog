@@ -66,16 +66,29 @@ export function ChatInterface({ messages, onSend, sport }: ChatInterfaceProps) {
       {messages.length > 0 && (
         <div className="max-h-96 overflow-y-auto px-4 py-4 space-y-4">
           {messages.map((msg) => (
-            <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+            <div key={msg.id} className={`flex items-end gap-2 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+              {msg.role === "assistant" && (
+                <div className="flex-shrink-0 w-7 h-7 rounded-full bg-secondary border border-border flex items-center justify-center text-sm">
+                  🎾
+                </div>
+              )}
               <div
-                className={`max-w-[85%] text-sm leading-relaxed rounded-lg px-3 py-2 ${
+                className={`max-w-[80%] text-sm leading-relaxed rounded-2xl px-4 py-2.5 ${
                   msg.role === "user"
-                    ? "bg-foreground text-primary-foreground"
-                    : "bg-secondary text-foreground"
+                    ? "bg-foreground text-background rounded-br-sm"
+                    : "bg-secondary text-foreground rounded-bl-sm"
                 }`}
               >
+                {msg.role === "assistant" && (
+                  <p className="text-[10px] font-semibold text-primary uppercase tracking-wide mb-1">Coach</p>
+                )}
                 <div className="whitespace-pre-wrap">{msg.content}</div>
               </div>
+              {msg.role === "user" && (
+                <div className="flex-shrink-0 w-7 h-7 rounded-full bg-foreground border border-border flex items-center justify-center text-sm">
+                  👤
+                </div>
+              )}
             </div>
           ))}
           <div ref={bottomRef} />
@@ -107,7 +120,7 @@ export function ChatInterface({ messages, onSend, sport }: ChatInterfaceProps) {
           <button
             type="submit"
             disabled={!input.trim()}
-            className="p-2 rounded-md bg-foreground text-primary-foreground disabled:opacity-30 hover:opacity-90 transition-opacity"
+            className="p-2 rounded-md bg-foreground text-background disabled:opacity-30 hover:opacity-90 transition-opacity"
           >
             <Send className="h-4 w-4" />
           </button>
