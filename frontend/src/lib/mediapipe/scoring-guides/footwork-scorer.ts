@@ -1,5 +1,5 @@
-import { LandmarkIndex, type ValidatedPoseFrame, type AnalysisResult } from "./landmark-schema";
-import { runScoringPipeline } from "./scorer-utils";
+import { LandmarkIndex, type ValidatedPoseFrame, type AnalysisResult } from "../landmark-schema";
+import { runScoringPipeline } from "../scorer-utils";
 import { type StrokePhase } from "./reference-angles";
 
 // ---------------------------------------------------------------------------
