@@ -62,7 +62,7 @@ export default function AppLayout({ user }: AppLayoutProps) {
         {activeTab === "learn" ? (
           <Learn sport={activeProfile.sport} />
         ) : (
-          <Progress profileId={activeProfile.id} />
+          <Progress profileId={activeProfile.id} userName={user.name} />
         )}
       </main>
     </div>

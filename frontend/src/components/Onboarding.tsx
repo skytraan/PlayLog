@@ -17,7 +17,11 @@ export function Onboarding({ onComplete }: OnboardingProps) {
 
   const validate = () => {
     const newErrors: { name?: string; email?: string } = {};
-    if (!name.trim()) newErrors.name = "Name is required";
+    if (!name.trim()) {
+      newErrors.name = "Full name is required";
+    } else if (name.trim().split(/\s+/).length < 2) {
+      newErrors.name = "Please enter your first and last name";
+    }
     if (!email.trim()) {
       newErrors.email = "Email is required";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -47,14 +51,14 @@ export function Onboarding({ onComplete }: OnboardingProps) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-foreground mb-1.5" htmlFor="name">
-              Name
+              Full Name
             </label>
             <input
               id="name"
               type="text"
               value={name}
               onChange={(e) => { setName(e.target.value); setErrors((prev) => ({ ...prev, name: undefined })); }}
-              placeholder="Your name"
+              placeholder="Your full name"
               className="w-full px-3 py-2 text-sm rounded-md border border-border bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20"
             />
             {errors.name && <p className="mt-1 text-xs text-destructive">{errors.name}</p>}
