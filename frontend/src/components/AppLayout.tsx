@@ -24,9 +24,7 @@ export default function AppLayout({ user }: AppLayoutProps) {
         <div className="mx-auto max-w-5xl px-4 sm:px-6">
           <div className="flex h-14 items-center justify-between">
             <div className="flex items-center gap-6">
-              <span className="text-base font-semibold tracking-tight text-foreground">
-                Playlog
-              </span>
+              <img src="/logo.png" alt="Playlog" className="h-8 w-auto" />
               <nav className="flex items-center gap-1">
                 <button
                   onClick={() => setActiveTab("learn")}
