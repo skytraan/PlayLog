@@ -35,6 +35,7 @@ export default defineSchema({
     // Serialized AnalysisResult JSON from the frontend scoring pipeline
     poseAnalysis: v.optional(v.string()),
     overallScore: v.optional(v.number()),
+    technique: v.optional(v.string()),
     createdAt: v.number(),
   }).index("by_session", ["sessionId"]),
 

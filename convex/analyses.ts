@@ -24,6 +24,7 @@ export const updateAnalysis = mutation({
     twelveLabsResult: v.optional(v.string()),
     poseAnalysis: v.optional(v.string()),
     overallScore: v.optional(v.number()),
+    technique: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const analysis = await ctx.db.get(args.analysisId);

@@ -14,84 +14,63 @@ interface ProgressProps {
   userName: string;
 }
 
-const defaultRatings = TENNIS_SKILLS.map((name) => ({
-  name,
-  score: 0,
-  justification: "",
-  topWeakness: "",
-  topStrength: "",
-}));
 
 export function Progress({ userId, userName }: ProgressProps) {
   const rawSessions = useQuery(api.sessions.listSessionsWithFeedback, { userId });
   const sessions = rawSessions ?? [];
   const totalSessions = sessions.length;
 
-  // Derive per-skill ratings from feedback across all sessions.
-  // Skills mentioned in strengths score higher; in improvements score lower.
-  const SKILL_KEYS: (keyof typeof fifaRatings)[] = ["serve", "forehand", "backhand", "volley", "footwork"];
-  const SKILL_ALIASES: Record<keyof typeof fifaRatings, string[]> = {
-    serve:     ["serve", "srv"],
-    forehand:  ["forehand", "fh"],
-    backhand:  ["backhand", "bh"],
-    volley:    ["volley", "vly", "net"],
-    footwork:  ["footwork", "ftw", "movement", "footspeed"],
+  // Map MediaPipe technique names to rating keys
+  const TECHNIQUE_TO_KEY: Record<string, keyof typeof fifaRatings> = {
+    serve:                "serve",
+    forehand:             "forehand",
+    backhand_one_handed:  "backhand",
+    volley:               "volley",
+    footwork:             "footwork",
   };
 
-  const fifaRatings = { serve: 0, forehand: 0, backhand: 0, volley: 0, footwork: 0 };
+  type RatingKey = "serve" | "forehand" | "backhand" | "volley" | "footwork";
+  const scoreSums: Record<RatingKey, number>  = { serve: 0, forehand: 0, backhand: 0, volley: 0, footwork: 0 };
+  const scoreCounts: Record<RatingKey, number> = { serve: 0, forehand: 0, backhand: 0, volley: 0, footwork: 0 };
 
-  if (sessions.length > 0) {
-    // Accumulate strength/improvement hits across sessions
-    const strengthHits: Record<string, number> = { serve: 0, forehand: 0, backhand: 0, volley: 0, footwork: 0 };
-    const improvHits: Record<string, number>   = { serve: 0, forehand: 0, backhand: 0, volley: 0, footwork: 0 };
-
-    for (const { feedback } of sessions) {
-      if (!feedback) continue;
-      for (const skill of SKILL_KEYS) {
-        const aliases = SKILL_ALIASES[skill];
-        const inStrength = feedback.strengths.some((s) =>
-          aliases.some((a) => s.toLowerCase().includes(a))
-        );
-        const inImprovement = feedback.improvements.some((s) =>
-          aliases.some((a) => s.toLowerCase().includes(a))
-        );
-        if (inStrength) strengthHits[skill]++;
-        if (inImprovement) improvHits[skill]++;
-      }
-    }
-
-    for (const skill of SKILL_KEYS) {
-      const s = strengthHits[skill];
-      const i = improvHits[skill];
-      const total = s + i;
-      if (total === 0) {
-        fifaRatings[skill] = 50; // neutral if never mentioned
-      } else {
-        // Scale: all strengths → ~85, all improvements → ~40
-        fifaRatings[skill] = Math.round(40 + (s / total) * 45);
-      }
-    }
+  for (const { technique, overallScore } of sessions) {
+    if (!technique || overallScore == null) continue;
+    const key = TECHNIQUE_TO_KEY[technique];
+    if (!key) continue;
+    scoreSums[key] += overallScore;
+    scoreCounts[key]++;
   }
 
-  // Use the most recent MediaPipe overallScore as the OVR; fall back to
-  // the feedback-derived weighted average if no pose score exists yet.
-  const latestPoseScore = sessions.find((s) => s.overallScore != null)?.overallScore ?? null;
-  const overallRating = sessions.length === 0
+  const fifaRatings: Record<RatingKey, number | null> = {
+    serve:     scoreCounts.serve     > 0 ? Math.round(scoreSums.serve     / scoreCounts.serve)     : null,
+    forehand:  scoreCounts.forehand  > 0 ? Math.round(scoreSums.forehand  / scoreCounts.forehand)  : null,
+    backhand:  scoreCounts.backhand  > 0 ? Math.round(scoreSums.backhand  / scoreCounts.backhand)  : null,
+    volley:    scoreCounts.volley    > 0 ? Math.round(scoreSums.volley    / scoreCounts.volley)    : null,
+    footwork:  scoreCounts.footwork  > 0 ? Math.round(scoreSums.footwork  / scoreCounts.footwork)  : null,
+  };
+
+  // OVR = weighted average of only the skills that have been tracked
+  const OVR_WEIGHTS: Record<RatingKey, number> = { serve: 0.25, forehand: 0.25, backhand: 0.20, footwork: 0.15, volley: 0.15 };
+  const trackedEntries = (Object.keys(fifaRatings) as RatingKey[]).filter((k) => fifaRatings[k] != null);
+  const totalWeight = trackedEntries.reduce((s, k) => s + OVR_WEIGHTS[k], 0);
+  const overallRating = trackedEntries.length === 0
     ? 0
-    : latestPoseScore ?? Math.round(
-        fifaRatings.serve * 0.25 +
-        fifaRatings.forehand * 0.25 +
-        fifaRatings.backhand * 0.20 +
-        fifaRatings.footwork * 0.15 +
-        fifaRatings.volley * 0.15
-      );
+    : Math.round(trackedEntries.reduce((s, k) => s + (fifaRatings[k] as number) * OVR_WEIGHTS[k], 0) / totalWeight);
+
+  const skillRatings = TENNIS_SKILLS.map((name) => ({
+    name,
+    score: fifaRatings[name.toLowerCase() as RatingKey] ?? 0,
+    justification: "",
+    topWeakness: "",
+    topStrength: "",
+  }));
 
   const card = {
     profileId: userId,
     playerName: userName,
     sport: "tennis" as const,
     overallRating,
-    ratings: defaultRatings,
+    ratings: skillRatings,
     level: getLevelTitle(overallRating),
     streak: 0,
     badges: [],

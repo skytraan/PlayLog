@@ -92,42 +92,14 @@ export function useVideoAnalysis({
 
         if (abortRef.current) return;
 
-        // ── Step 2: TwelveLabs indexing + MediaPipe in parallel ───────────────
+        // ── Step 2: TwelveLabs indexing ───────────────────────────────────────
         setStatus("analyzing");
 
-        const [indexResult] = await Promise.all([
-          // TwelveLabs: index video already in Convex storage
-          uploadAndIndexVideo(convex, {
-            sessionId: newSessionId,
-            analysisId: newAnalysisId,
-            sport,
-          }),
-
-          // MediaPipe: sample frames, score technique, persist computed result
-          (async () => {
-            disposePoseLandmarker();
-            const videoEl = document.createElement("video");
-            videoEl.src = URL.createObjectURL(videoFile);
-            videoEl.muted = true;
-            await new Promise<void>((resolve, reject) => {
-              videoEl.onloadedmetadata = () => resolve();
-              videoEl.onerror = () => reject(new Error("Failed to load video for MediaPipe"));
-            });
-
-            const frames = await sampleVideoFrames(videoEl, 2);
-            URL.revokeObjectURL(videoEl.src);
-
-            if (frames.length > 0) {
-              const scorer = pickScorer(requestedSections);
-              const poseResult = scorer(frames, 2, "right");
-              await updateAnalysis({
-                analysisId: newAnalysisId,
-                poseAnalysis: JSON.stringify(poseResult),
-                overallScore: poseResult.overallScore,
-              });
-            }
-          })(),
-        ]);
+        const indexResult = await uploadAndIndexVideo(convex, {
+          sessionId: newSessionId,
+          analysisId: newAnalysisId,
+          sport,
+        });
 
         if (abortRef.current) return;
 
@@ -165,6 +137,33 @@ Identify strengths, weaknesses, and specific drills to improve each area.`;
         });
 
         setFeedbackId(newFeedbackId);
+
+        if (abortRef.current) return;
+
+        // ── Step 6: MediaPipe pose scoring (after Gemini) ─────────────────────
+        disposePoseLandmarker();
+        const videoEl = document.createElement("video");
+        videoEl.src = URL.createObjectURL(videoFile);
+        videoEl.muted = true;
+        await new Promise<void>((resolve, reject) => {
+          videoEl.onloadedmetadata = () => resolve();
+          videoEl.onerror = () => reject(new Error("Failed to load video for MediaPipe"));
+        });
+
+        const frames = await sampleVideoFrames(videoEl, 2);
+        URL.revokeObjectURL(videoEl.src);
+
+        if (frames.length > 0) {
+          const scorer = pickScorer(requestedSections);
+          const poseResult = scorer(frames, 2, "right");
+          await updateAnalysis({
+            analysisId: newAnalysisId,
+            poseAnalysis: JSON.stringify(poseResult),
+            overallScore: poseResult.overallScore,
+            technique: poseResult.technique,
+          });
+        }
+
         setStatus("ready");
       } catch (err) {
         if (abortRef.current) return;

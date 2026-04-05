@@ -1,9 +1,9 @@
 interface TennisRatings {
-  serve: number;
-  forehand: number;
-  backhand: number;
-  volley: number;
-  footwork: number;
+  serve: number | null;
+  forehand: number | null;
+  backhand: number | null;
+  volley: number | null;
+  footwork: number | null;
 }
 
 interface FifaPlayerCardProps {
@@ -60,26 +60,30 @@ const tierStyles: Record<CardTier, { bg: string; shadow: string; border: string;
   },
 };
 
-function calcOverall(r: TennisRatings): number {
-  return Math.round(
-    r.serve * 0.25 +
-    r.forehand * 0.25 +
-    r.backhand * 0.20 +
-    r.footwork * 0.15 +
-    r.volley * 0.15
-  );
+function calcOverall(r: TennisRatings): number | null {
+  const entries: Array<[number | null, number]> = [
+    [r.serve, 0.25],
+    [r.forehand, 0.25],
+    [r.backhand, 0.20],
+    [r.footwork, 0.15],
+    [r.volley, 0.15],
+  ];
+  const tracked = entries.filter(([v]) => v != null) as Array<[number, number]>;
+  if (tracked.length === 0) return null;
+  const totalWeight = tracked.reduce((s, [, w]) => s + w, 0);
+  return Math.round(tracked.reduce((s, [v, w]) => s + v * w, 0) / totalWeight);
 }
 
 
 export function FifaPlayerCard({ name, photoUrl, ratings }: FifaPlayerCardProps) {
   const overall = calcOverall(ratings);
-  const tier = getTier(overall);
+  const tier = getTier(overall ?? 0);
   const s = tierStyles[tier];
 
-  const stat = (label: string, value: number) => (
+  const stat = (label: string, value: number | null) => (
     <div className="flex items-center gap-1.5">
       <span className="text-sm font-bold leading-none" style={{ color: s.textColor, minWidth: "2ch", textAlign: "right" }}>
-        {value || "—"}
+        {value ?? "—"}
       </span>
       <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: s.labelColor, opacity: 0.85 }}>
         {label}
@@ -111,7 +115,7 @@ export function FifaPlayerCard({ name, photoUrl, ratings }: FifaPlayerCardProps)
           <div className="flex items-start justify-between">
             <div className="flex flex-col items-center leading-none">
               <span className="text-4xl font-black" style={{ color: s.textColor, textShadow: "0 1px 2px rgba(0,0,0,0.2)" }}>
-                {overall || "—"}
+                {overall ?? "—"}
               </span>
               <span className="text-[10px] font-bold uppercase tracking-widest mt-0.5" style={{ color: s.labelColor }}>
                 OVR

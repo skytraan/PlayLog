@@ -111,6 +111,7 @@ export const listSessionsWithFeedback = query({
           session,
           feedback: feedback ?? null,
           overallScore: analysis?.overallScore ?? null,
+          technique: analysis?.technique ?? null,
         };
       })
     );
