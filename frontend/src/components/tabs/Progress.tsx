@@ -27,26 +27,72 @@ export function Progress({ userId, userName }: ProgressProps) {
   const sessions = rawSessions ?? [];
   const totalSessions = sessions.length;
 
+  // Derive per-skill ratings from feedback across all sessions.
+  // Skills mentioned in strengths score higher; in improvements score lower.
+  const SKILL_KEYS: (keyof typeof fifaRatings)[] = ["serve", "forehand", "backhand", "volley", "footwork"];
+  const SKILL_ALIASES: Record<keyof typeof fifaRatings, string[]> = {
+    serve:     ["serve", "srv"],
+    forehand:  ["forehand", "fh"],
+    backhand:  ["backhand", "bh"],
+    volley:    ["volley", "vly", "net"],
+    footwork:  ["footwork", "ftw", "movement", "footspeed"],
+  };
+
+  const fifaRatings = { serve: 0, forehand: 0, backhand: 0, volley: 0, footwork: 0 };
+
+  if (sessions.length > 0) {
+    // Accumulate strength/improvement hits across sessions
+    const strengthHits: Record<string, number> = { serve: 0, forehand: 0, backhand: 0, volley: 0, footwork: 0 };
+    const improvHits: Record<string, number>   = { serve: 0, forehand: 0, backhand: 0, volley: 0, footwork: 0 };
+
+    for (const { feedback } of sessions) {
+      if (!feedback) continue;
+      for (const skill of SKILL_KEYS) {
+        const aliases = SKILL_ALIASES[skill];
+        const inStrength = feedback.strengths.some((s) =>
+          aliases.some((a) => s.toLowerCase().includes(a))
+        );
+        const inImprovement = feedback.improvements.some((s) =>
+          aliases.some((a) => s.toLowerCase().includes(a))
+        );
+        if (inStrength) strengthHits[skill]++;
+        if (inImprovement) improvHits[skill]++;
+      }
+    }
+
+    for (const skill of SKILL_KEYS) {
+      const s = strengthHits[skill];
+      const i = improvHits[skill];
+      const total = s + i;
+      if (total === 0) {
+        fifaRatings[skill] = 50; // neutral if never mentioned
+      } else {
+        // Scale: all strengths → ~85, all improvements → ~40
+        fifaRatings[skill] = Math.round(40 + (s / total) * 45);
+      }
+    }
+  }
+
+  const overallRating = sessions.length === 0 ? 0 : Math.round(
+    fifaRatings.serve * 0.25 +
+    fifaRatings.forehand * 0.25 +
+    fifaRatings.backhand * 0.20 +
+    fifaRatings.footwork * 0.15 +
+    fifaRatings.volley * 0.15
+  );
+
   const card = {
     profileId: userId,
     playerName: userName,
     sport: "tennis" as const,
-    overallRating: 0,
+    overallRating,
     ratings: defaultRatings,
-    level: getLevelTitle(0),
+    level: getLevelTitle(overallRating),
     streak: 0,
     badges: [],
     activeChallenge: null,
     challengeSetDate: null,
     totalSessions,
-  };
-
-  const fifaRatings = {
-    serve: 0,
-    forehand: 0,
-    backhand: 0,
-    volley: 0,
-    footwork: 0,
   };
 
   return (
