@@ -1,7 +1,11 @@
 import { useState } from "react";
+import { useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import type { Id } from "../../../convex/_generated/dataModel";
 import { Video, TrendingUp, Dumbbell } from "lucide-react";
 
 export interface UserProfile {
+  userId: Id<"users">;
   name: string;
   email: string;
   sport: "tennis";
@@ -32,7 +36,9 @@ const features = [
 export function Onboarding({ onComplete }: OnboardingProps) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [errors, setErrors] = useState<{ name?: string; email?: string }>({});
+  const [errors, setErrors] = useState<{ name?: string; email?: string; submit?: string }>({});
+  const [submitting, setSubmitting] = useState(false);
+  const createUser = useMutation(api.users.createUser);
 
   const validate = () => {
     const newErrors: { name?: string; email?: string } = {};
@@ -49,14 +55,26 @@ export function Onboarding({ onComplete }: OnboardingProps) {
     return newErrors;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const newErrors = validate();
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
     }
-    onComplete({ name: name.trim(), email: email.trim(), sport: "tennis" });
+    setSubmitting(true);
+    try {
+      const userId = await createUser({
+        name: name.trim(),
+        email: email.trim(),
+        sports: ["tennis"],
+      });
+      onComplete({ userId, name: name.trim(), email: email.trim(), sport: "tennis" });
+    } catch (err) {
+      setErrors({ submit: err instanceof Error ? err.message : "Failed to create account" });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -116,11 +134,13 @@ export function Onboarding({ onComplete }: OnboardingProps) {
               </div>
             </div>
 
+            {errors.submit && <p className="text-xs text-destructive">{errors.submit}</p>}
             <button
               type="submit"
-              className="w-full mt-2 px-4 py-2.5 text-sm font-medium rounded-md bg-foreground text-background hover:opacity-90 transition-opacity"
+              disabled={submitting}
+              className="w-full mt-2 px-4 py-2.5 text-sm font-medium rounded-md bg-foreground text-background hover:opacity-90 transition-opacity disabled:opacity-50"
             >
-              Get started
+              {submitting ? "Creating account…" : "Get started"}
             </button>
           </form>
         </div>

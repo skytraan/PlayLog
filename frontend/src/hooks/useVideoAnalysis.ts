@@ -116,7 +116,7 @@ export function useVideoAnalysis({
               videoEl.onerror = () => reject(new Error("Failed to load video for MediaPipe"));
             });
 
-            const frames = await sampleVideoFrames(videoEl, 5);
+            await analyzePose(videoEl);
             URL.revokeObjectURL(videoEl.src);
 
             if (frames.length > 0) {
