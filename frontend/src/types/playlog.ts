@@ -1,4 +1,4 @@
-export type Sport = "tennis" | "golf";
+export type Sport = "tennis" | "golf" | "basketball";
 
 export interface Profile {
   id: string;
