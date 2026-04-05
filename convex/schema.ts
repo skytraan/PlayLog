@@ -2,21 +2,30 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
-  // Sport-specific prompt templates sent to TwelveLabs for video analysis
+  // Onboarding: one row per user
+  users: defineTable({
+    name: v.string(),
+    email: v.string(),
+    sports: v.array(v.string()), // e.g. ["tennis"]
+    createdAt: v.number(),
+  }).index("by_email", ["email"]),
+
+  // Sport-specific prompt templates, one row per section
   prompts: defineTable({
     sport: v.string(),
+    section: v.string(), // "forehand" | "backhand" | "serve" | "volley" | "footwork"
     name: v.string(),
-    // The full prompt text sent to TwelveLabs (e.g. the tennis forehand/backhand/serve/etc. template)
     content: v.string(),
-    // Ordered list of stroke/category sections covered (e.g. ["forehand", "backhand", "serve"])
-    sections: v.array(v.string()),
     createdAt: v.number(),
-  }).index("by_sport", ["sport"]),
+  }).index("by_sport_section", ["sport", "section"]),
 
   // A session represents one user-uploaded video coaching session
   sessions: defineTable({
+    userId: v.id("users"),
     sport: v.string(),
     videoStorageId: v.id("_storage"),
+    // Sections the user asked to analyze, parsed from their prompt
+    requestedSections: v.array(v.string()),
     status: v.union(
       v.literal("uploading"),
       v.literal("processing"),
@@ -25,17 +34,14 @@ export default defineSchema({
     ),
     errorMessage: v.optional(v.string()),
     createdAt: v.number(),
-  }),
+  }).index("by_user", ["userId"]),
 
   // Analysis produced by TwelveLabs video intelligence and/or MediaPipe CV
   analyses: defineTable({
     sessionId: v.id("sessions"),
-    // Which prompt template was used for this analysis
     promptId: v.optional(v.id("prompts")),
-    // TwelveLabs index/video IDs for retrieval
     twelveLabsIndexId: v.optional(v.string()),
     twelveLabsVideoId: v.optional(v.string()),
-    // MediaPipe pose landmarks: array of frames, each frame is array of {x, y, z, visibility}
     poseLandmarks: v.optional(
       v.array(
         v.array(
@@ -48,7 +54,6 @@ export default defineSchema({
         )
       )
     ),
-    // Raw TwelveLabs analysis results
     twelveLabsResult: v.optional(v.string()),
     createdAt: v.number(),
   }).index("by_session", ["sessionId"]),
@@ -57,12 +62,10 @@ export default defineSchema({
   feedback: defineTable({
     sessionId: v.id("sessions"),
     analysisId: v.id("analyses"),
-    // Structured feedback sections
     summary: v.string(),
     strengths: v.array(v.string()),
     improvements: v.array(v.string()),
     drills: v.array(v.string()),
-    // Raw Gemini response for debugging
     rawResponse: v.optional(v.string()),
     createdAt: v.number(),
   })
