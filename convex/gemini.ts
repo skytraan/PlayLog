@@ -1,3 +1,5 @@
+"use node";
+
 import { ConvexError, v } from "convex/values";
 import { action, mutation } from "./_generated/server";
 import { api } from "./_generated/api";
@@ -196,7 +198,7 @@ export const askCoach = action({
 
       // Build multi-turn history for Gemini
       const chat = model.startChat({
-        history: history.map((msg) => ({
+        history: history.map((msg: { role: "user" | "model"; content: string }) => ({
           role: msg.role,
           parts: [{ text: msg.content }],
         })),
