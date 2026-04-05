@@ -1,4 +1,3 @@
-import { useRef } from "react";
 import { useAction } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
@@ -15,7 +14,6 @@ interface LearnProps {
 }
 
 export function Learn({ sport, userId }: LearnProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const askCoach = useAction(api.gemini.askCoach);
 
@@ -26,17 +24,6 @@ export function Learn({ sport, userId }: LearnProps) {
       ? ["forehand", "backhand", "serve", "footwork"]
       : ["driving", "iron play", "short game", "putting"],
   });
-
-  const handleUploadClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    e.target.value = "";
-    await analyze(file);
-  };
 
   const handleSendMessage = async (content: string) => {
     if (!sessionId) return;
@@ -75,15 +62,7 @@ export function Learn({ sport, userId }: LearnProps) {
 
   return (
     <div className="space-y-6">
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="video/mp4,video/quicktime,video/x-msvideo"
-        className="hidden"
-        onChange={handleFileChange}
-      />
-
-      <UploadArea status={status} onUpload={handleUploadClick} />
+      <UploadArea status={status} onUpload={analyze} />
 
       {error && (
         <p className="text-xs text-destructive px-1">{error}</p>
