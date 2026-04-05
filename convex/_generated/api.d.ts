@@ -14,6 +14,7 @@ import type * as gemini from "../gemini.js";
 import type * as messages from "../messages.js";
 import type * as sessions from "../sessions.js";
 import type * as storage from "../storage.js";
+import type * as twelvelabs from "../twelvelabs.js";
 import type * as users from "../users.js";
 
 import type {
@@ -29,6 +30,7 @@ declare const fullApi: ApiFromModules<{
   messages: typeof messages;
   sessions: typeof sessions;
   storage: typeof storage;
+  twelvelabs: typeof twelvelabs;
   users: typeof users;
 }>;
 
