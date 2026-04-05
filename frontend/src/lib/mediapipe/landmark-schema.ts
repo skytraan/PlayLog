@@ -182,7 +182,7 @@ export type FrameMetrics = z.infer<typeof FrameMetricsSchema>;
 
 export const AnalysisResultSchema = z.object({
   sport: z.literal("tennis"),
-  technique: z.enum(["forehand", "backhand_one_handed", "serve"]),
+  technique: z.enum(["forehand", "backhand_one_handed", "serve", "volley", "footwork"]),
   dominantHand: z.enum(["left", "right"]),
   fps: z.number().positive(),
   totalFrames: z.number().int().nonnegative(),

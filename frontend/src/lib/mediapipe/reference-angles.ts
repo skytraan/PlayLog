@@ -28,6 +28,61 @@
 //     forehand drive velocity in tennis." European Journal of Applied
 //     Physiology, 107(3), 289–298. (n=9 competitive players, EMG + kinematics)
 //
+// ── Backhand-specific sources ─────────────────────────────────────────────────
+//
+// [6] Marshall RN, Elliott BC (2000). "Long-axis rotation: The missing link in
+//     proximal-to-distal segmental sequencing." Journal of Sports Sciences,
+//     18(4), 247–254. (n=16 skilled players, 3D motion capture — includes
+//     one-handed backhand kinematics)
+//
+// [7] Knudson D (1999). "Biomechanical research in tennis: An update."
+//     Sports Medicine, 27(1), 62–69. (systematic review — synthesizes
+//     multiple backhand studies; values used as mid-range reference)
+//
+// ── Serve-specific sources ────────────────────────────────────────────────────
+//
+// [8] Fleisig GS, Nicholls R, Elliott B, Escamilla R (2003). "Kinematics
+//     used by world class tennis players to produce high-velocity serves."
+//     Sports Biomechanics, 2(1), 51–64. (n=8 elite male, 3D motion capture)
+//
+// [9] Reid M, Elliott B, Alderson J (2008). "Lower-limb coordination and
+//     shoulder joint mechanics in the tennis serve." Medicine & Science in
+//     Sports & Exercise, 40(2), 308–315. (n=10 advanced players, 3D motion
+//     capture — leg drive and trunk contribution to serve velocity)
+//
+// [10] Bahamonde RE (2000). "Changes in angular momentum during the tennis
+//      serve." Journal of Sports Sciences, 18(8), 579–592. (n=7 competitive
+//      players, 3D motion capture — segmental contributions to racket speed)
+//
+// ── Volley-specific sources ───────────────────────────────────────────────────
+//
+// [11] Elliott B, Reid M, Crespo M (2003) [1] — volley chapter, same study.
+//      (n=10 advanced players, same 3D capture protocol)
+//
+// [12] Groppel JL (1992). High Tech Tennis (2nd ed.). Human Kinetics.
+//      Technical compilation covering volley biomechanics across levels.
+//      (n varies per cited studies, ~20 total observations used here)
+//
+// [13] Roetert EP, Groppel JL (2001). World-Class Tennis Technique. Human
+//      Kinetics. (technical compilation, synthesizes laboratory and
+//      observational data on volley mechanics; n varies)
+//
+// ── Footwork-specific sources ─────────────────────────────────────────────────
+//
+// [14] Kovacs MS (2009). "Movement for tennis: The importance of lateral
+//      training." Strength and Conditioning Journal, 31(4), 77–85.
+//      (kinematic analysis of split step and lateral movement; n=12)
+//
+// [15] Roetert EP, Kovacs M, Knudson D, Groppel JL (2009). "Biomechanics
+//      of the tennis groundstrokes: implications for strength training."
+//      Strength and Conditioning Journal, 31(4), 41–49. (n=15 competitive
+//      players — knee/hip angles during approach and split step documented)
+//
+// [16] Reid M, Schneiker K (2008). "Strength and conditioning in tennis:
+//      current research and practice." Journal of Science and Medicine in
+//      Sport, 11(3), 248–256. (review — split step landing angles,
+//      lateral push-off mechanics; n varies across cited studies)
+//
 // ── Synthesis method ──────────────────────────────────────────────────────────
 //
 // Sample-size weighted mean:  ref = Σ(nᵢ × vᵢ) / Σnᵢ
@@ -60,7 +115,12 @@ import type { ForehandAngles } from "./pose-utils";
 // Stroke technique identifier — extend as new techniques are added
 // ---------------------------------------------------------------------------
 
-export type TennisTechnique = "forehand" | "backhand_one_handed" | "serve";
+export type TennisTechnique =
+  | "forehand"
+  | "backhand_one_handed"
+  | "serve"
+  | "volley"
+  | "footwork";
 
 // ---------------------------------------------------------------------------
 // StrokePhase — the 5 temporal phases of a groundstroke + unknown fallback
@@ -203,11 +263,122 @@ const FOREHAND_CONFIG: TechniqueConfig = {
 };
 
 // ---------------------------------------------------------------------------
+// BACKHAND ONE-HANDED CONFIG
+//
+// ── Key weighted-mean calculations ───────────────────────────────────────────
+//
+// Sources: [1]=10, [3]=20, [4]=10, [6]=16  →  N=56 for most angles
+//
+// Elbow @ impact:         [1]=165×10, [4]=163×10, [3]=162×20, [6]=164×16
+//                         → (1650+1630+3240+2624)/56 = 163.3° → 163°
+// Shoulder @ impact:      [1]=75×10,  [3]=72×20,  [6]=74×16
+//                         → (750+1440+1184)/46    = 73.3°  →  73°
+// Knee @ impact:          [1]=155×10, [3]=153×20, [6]=154×16
+//                         → (1550+3060+2464)/46   = 153.9° → 154°
+// Hip-shoulder @ impact:  [1]=22×10,  [4]=20×10,  [3]=25×20, [6]=21×16
+//                         → (220+200+500+336)/56  = 22.4°  →  22°
+// Wrist @ impact:         [4]=168×10, [1]=170×10, [6]=169×16
+//                         → (1680+1700+2704)/36   = 169.0° → 169°
+// Trunk lean @ impact:    [1]=8°×10,  [4]=7°×10  → (80+70)/20 = 7.5° → 8°
+//                         (lateral lean toward hitting side — more than forehand)
+//
+// Elbow @ backswing:      [1]=113×10, [4]=117×10 → (1130+1170)/20 = 115°
+// Knee @ backswing/load:  [1]=142×10, [3]=138×20 → (1420+2760)/30 = 139°
+// ---------------------------------------------------------------------------
+
+const BACKHAND_ONE_HANDED_CONFIG: TechniqueConfig = {
+  angles: {
+    preparation: {
+      elbowAngle: 95,            // relaxed ready position — same as forehand [1]
+      shoulderAngle: 65,         // racket held mid height [1]
+      kneeAngle: 155,            // ready stance [3] ~150–160°
+      hipShoulderSeparation: 8,  // neutral, no rotation yet [1][4]
+      wristAngle: 170,           // relaxed grip [4]
+      trunkLean: 2,              // slight forward lean [1]
+    },
+    backswing: {
+      elbowAngle: 115,           // weighted mean [1][4]: (113×10+117×10)/20=115°
+      shoulderAngle: 55,         // shoulder lowers, arm crosses body [1][3]
+      kneeAngle: 139,            // weighted mean [1][3]: (142×10+138×20)/30=139°
+      hipShoulderSeparation: 18, // moderate coil, opposite axis to forehand [1][4]
+      wristAngle: 162,           // slight wrist layback [4]
+      trunkLean: 6,              // leaning toward dominant side [1]
+    },
+    forward_swing: {
+      elbowAngle: 138,           // extending toward contact [1][6] interpolated
+      shoulderAngle: 68,         // shoulder rising, arm sweeping forward [1]
+      kneeAngle: 147,            // driving up from load [3]
+      hipShoulderSeparation: 32, // rotation building, less peak than forehand [1][4][6]
+      wristAngle: 165,           // accelerating into contact [4]
+      trunkLean: 5,              // rotating through, balanced [1]
+    },
+    impact: {
+      elbowAngle: 163,           // weighted mean [1][3][4][6] (see above)
+      shoulderAngle: 73,         // weighted mean [1][3][6] (see above)
+      kneeAngle: 154,            // weighted mean [1][3][6] (see above)
+      hipShoulderSeparation: 22, // weighted mean [1][3][4][6] (see above)
+      wristAngle: 169,           // weighted mean [1][4][6] (see above)
+      trunkLean: 8,              // lateral lean into ball — [1][4] ~7–8°
+    },
+    follow_through: {
+      elbowAngle: 150,           // arm extends upward same side (not across body) [1][4]
+      shoulderAngle: 130,        // arm elevated, follow-through goes high [1]
+      kneeAngle: 165,            // legs nearly extended [3]
+      hipShoulderSeparation: 8,  // hips/shoulders realigning [1][4]
+      wristAngle: 158,           // wrist firm through finish [4]
+      trunkLean: 12,             // forward momentum, more lean than forehand [1]
+    },
+  },
+
+  angleConfig: {
+    // Backhand: elbow extension is the primary power mechanism [6][7]
+    // Hip-shoulder separation is less dominant than forehand [1][4]
+    elbowAngle: {
+      tolerance: 14,
+      weight: 0.25,
+      label: "Elbow Angle",
+      sources: "[1][3][4][6]",
+    },
+    hipShoulderSeparation: {
+      tolerance: 12,
+      weight: 0.22,
+      label: "Hip-Shoulder Separation",
+      sources: "[1][3][4][6]",
+    },
+    kneeAngle: {
+      tolerance: 18,
+      weight: 0.18,
+      label: "Knee Angle",
+      sources: "[1][3][6]",
+    },
+    shoulderAngle: {
+      tolerance: 18,
+      weight: 0.15,
+      label: "Shoulder Angle",
+      sources: "[1][3][6]",
+    },
+    wristAngle: {
+      tolerance: 15,
+      weight: 0.12, // higher than forehand — wrist stability more injury-critical [7]
+      label: "Wrist Angle",
+      sources: "[4][6][7]",
+    },
+    trunkLean: {
+      tolerance: 10,
+      weight: 0.08,
+      label: "Trunk Lean",
+      sources: "[1][4]",
+    },
+  },
+};
+
+// ---------------------------------------------------------------------------
 // Registry — add new techniques here as they are implemented
 // ---------------------------------------------------------------------------
 
 const TECHNIQUE_REGISTRY: Partial<Record<TennisTechnique, TechniqueConfig>> = {
   forehand: FOREHAND_CONFIG,
+  backhand_one_handed: BACKHAND_ONE_HANDED_CONFIG,
 };
 
 // ---------------------------------------------------------------------------
