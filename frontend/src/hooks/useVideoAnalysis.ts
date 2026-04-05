@@ -108,7 +108,7 @@ export function useVideoAnalysis({
               await updateAnalysis({
                 analysisId: newAnalysisId,
                 poseLandmarks: landmarks,
-              } as never); // poseLandmarks added via schema
+              });
             }
           })(),
         ]);

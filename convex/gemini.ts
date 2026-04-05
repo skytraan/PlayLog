@@ -13,18 +13,84 @@ function getClient() {
   return new GoogleGenerativeAI(apiKey);
 }
 
+// BlazePose joint indices for tennis-relevant landmarks
+const TENNIS_JOINTS: Record<string, number> = {
+  LEFT_SHOULDER: 11, RIGHT_SHOULDER: 12,
+  LEFT_ELBOW: 13, RIGHT_ELBOW: 14,
+  LEFT_WRIST: 15, RIGHT_WRIST: 16,
+  LEFT_HIP: 23, RIGHT_HIP: 24,
+  LEFT_KNEE: 25, RIGHT_KNEE: 26,
+};
+
+type Lm = { x: number; y: number; z: number; visibility: number };
+
+function calcAngle2D(a: Lm, b: Lm, c: Lm): number {
+  const ba = { x: a.x - b.x, y: a.y - b.y };
+  const bc = { x: c.x - b.x, y: c.y - b.y };
+  const dot = ba.x * bc.x + ba.y * bc.y;
+  const mag = Math.sqrt(ba.x ** 2 + ba.y ** 2) * Math.sqrt(bc.x ** 2 + bc.y ** 2);
+  return mag === 0 ? 0 : (Math.acos(Math.max(-1, Math.min(1, dot / mag))) * 180) / Math.PI;
+}
+
+function buildPoseSummary(frames: Lm[][]): string {
+  if (frames.length === 0) return "";
+
+  // Average visibility per key joint
+  const avgVis: Record<string, number> = {};
+  for (const [name, idx] of Object.entries(TENNIS_JOINTS)) {
+    const vals = frames.map((f) => f[idx]?.visibility ?? 0);
+    avgVis[name] = vals.reduce((a, b) => a + b, 0) / vals.length;
+  }
+  const tracked = Object.entries(avgVis)
+    .filter(([, v]) => v >= 0.6)
+    .map(([name]) => name);
+
+  // Representative frame angles (first, mid, last)
+  const indices = [0, Math.floor(frames.length / 2), frames.length - 1];
+  const angleLines: string[] = [];
+  for (const fi of indices) {
+    const f = frames[fi];
+    const ts = ((fi / frames.length) * 100).toFixed(0);
+    for (const [side, shoulder, elbow, wrist] of [
+      ["Right", 12, 14, 16],
+      ["Left", 11, 13, 15],
+    ] as [string, number, number, number][]) {
+      if (
+        f[shoulder].visibility >= 0.6 &&
+        f[elbow].visibility >= 0.6 &&
+        f[wrist].visibility >= 0.6
+      ) {
+        const angle = calcAngle2D(f[shoulder], f[elbow], f[wrist]);
+        angleLines.push(`  ${side} elbow angle at ~${ts}% of video: ${Math.round(angle)}°`);
+      }
+    }
+  }
+
+  const lines = [
+    `Pose analysis: ${frames.length} frames sampled at 5 fps`,
+    `Joints tracked with ≥60% confidence: ${tracked.join(", ") || "none"}`,
+    ...(angleLines.length > 0 ? ["Elbow angles (shoulder→elbow→wrist):", ...angleLines] : []),
+  ];
+  return `Biomechanical pose data:\n${lines.map((l) => `  ${l}`).join("\n")}`;
+}
+
 function buildSessionContext(
   sport: string,
   requestedSections: string[],
-  twelveLabsResult?: string
+  twelveLabsResult?: string,
+  poseLandmarks?: Lm[][]
 ): string {
-  return [
+  const parts = [
     `Sport: ${sport}`,
     `Sections analyzed: ${requestedSections.join(", ")}`,
     twelveLabsResult
       ? `Video analysis results:\n${twelveLabsResult}`
       : "Video analysis not yet available.",
-  ].join("\n");
+  ];
+  if (poseLandmarks && poseLandmarks.length > 0) {
+    parts.push(buildPoseSummary(poseLandmarks));
+  }
+  return parts.join("\n");
 }
 
 const COACH_SYSTEM_PROMPT = `You are an expert sports coach providing personalized, constructive feedback.
@@ -53,7 +119,8 @@ export const generateFeedback = action({
     const sessionContext = buildSessionContext(
       session.sport,
       session.requestedSections,
-      analysis.twelveLabsResult ?? undefined
+      analysis.twelveLabsResult ?? undefined,
+      analysis.poseLandmarks ?? undefined
     );
 
     const prompt = `Based on the following session data, provide structured coaching feedback.
