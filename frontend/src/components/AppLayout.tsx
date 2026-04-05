@@ -63,7 +63,7 @@ export default function AppLayout({ user }: AppLayoutProps) {
 
       <main className="mx-auto max-w-5xl px-4 sm:px-6 py-6">
         {activeTab === "learn" ? (
-          <Learn sport={activeProfile.sport} />
+          <Learn sport={activeProfile.sport} user={user} />
         ) : (
           <Progress profileId={activeProfile.id} userName={user.name} />
         )}
