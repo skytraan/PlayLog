@@ -61,7 +61,8 @@ cp .env.example .env.local
 |---|---|
 | `VITE_CONVEX_URL` | e.g. `https://your-project-name.convex.cloud` |
 | `VITE_CONVEX_SITE_URL` | e.g. `https://your-project-name.convex.site` |
-| `VITE_TWELVELABS_API_KEY` | Your TwelveLabs API key |
+| `TWELVELABS_API_KEY` | Your TwelveLabs API key |
+| `GEMINI_API_KEY` | Your GEMINI API key |
 
 ### Running
 
