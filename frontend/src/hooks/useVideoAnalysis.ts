@@ -14,13 +14,22 @@ import type { AnalysisStatus } from "../types/playlog";
 
 type Scorer = (frames: ValidatedPoseFrame[], fps: number, dominantHand: "left" | "right") => ReturnType<typeof scoreForehand>;
 
-function pickScorer(sections: string[]): Scorer {
-  const first = (sections[0] ?? "").toLowerCase();
-  if (first.includes("backhand")) return scoreBackhand;
-  if (first.includes("serve")) return scoreServe;
-  if (first.includes("volley")) return scoreVolley;
-  if (first.includes("footwork")) return scoreFootwork;
-  return scoreForehand;
+const TECHNIQUE_SCORERS: Array<{ keyword: string; scorer: Scorer }> = [
+  { keyword: "backhand", scorer: scoreBackhand },
+  { keyword: "serve",    scorer: scoreServe },
+  { keyword: "volley",   scorer: scoreVolley },
+  { keyword: "footwork", scorer: scoreFootwork },
+  { keyword: "forehand", scorer: scoreForehand },
+];
+
+function pickScorers(sections: string[]): Scorer[] {
+  const matched: Scorer[] = [];
+  for (const section of sections) {
+    const lower = section.toLowerCase();
+    const entry = TECHNIQUE_SCORERS.find((t) => lower.includes(t.keyword));
+    if (entry && !matched.includes(entry.scorer)) matched.push(entry.scorer);
+  }
+  return matched.length > 0 ? matched : [scoreForehand];
 }
 
 interface UseVideoAnalysisParams {
@@ -34,7 +43,9 @@ interface UseVideoAnalysisResult {
   error: string | null;
   sessionId: Id<"sessions"> | null;
   feedbackId: string | null;
+  currentVideo: File | null;
   analyze: (videoFile: File) => Promise<void>;
+  reset: () => void;
 }
 
 export function useVideoAnalysis({
@@ -47,7 +58,17 @@ export function useVideoAnalysis({
   const [error, setError] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<Id<"sessions"> | null>(null);
   const [feedbackId, setFeedbackId] = useState<string | null>(null);
+  const [currentVideo, setCurrentVideo] = useState<File | null>(null);
   const abortRef = useRef(false);
+
+  const reset = useCallback(() => {
+    abortRef.current = true;
+    setStatus("idle");
+    setError(null);
+    setSessionId(null);
+    setFeedbackId(null);
+    setCurrentVideo(null);
+  }, []);
 
   const generateUploadUrl = useMutation(api.storage.generateUploadUrl);
   const createSession = useMutation(api.sessions.createSession);
@@ -63,6 +84,7 @@ export function useVideoAnalysis({
       setError(null);
       setFeedbackId(null);
       setSessionId(null);
+      setCurrentVideo(videoFile);
 
       try {
         // ── Step 1: Upload to Convex storage ──────────────────────────────────
@@ -155,13 +177,16 @@ Identify strengths, weaknesses, and specific drills to improve each area.`;
         URL.revokeObjectURL(videoEl.src);
 
         if (frames.length > 0) {
-          const scorer = pickScorer(requestedSections);
-          const poseResult = scorer(frames, 2, "right");
+          const scorers = pickScorers(requestedSections);
+          const poseResults = scorers.map((scorer) => scorer(frames, 2, "right"));
+          const overallScore = Math.round(
+            poseResults.reduce((s, r) => s + r.overallScore, 0) / poseResults.length
+          );
           await updateAnalysis({
             analysisId: newAnalysisId,
-            poseAnalysis: JSON.stringify(poseResult),
-            overallScore: poseResult.overallScore,
-            technique: poseResult.technique,
+            poseAnalysis: JSON.stringify(poseResults),
+            overallScore,
+            technique: poseResults.map((r) => r.technique).join(","),
           });
         }
 
@@ -191,5 +216,5 @@ Identify strengths, weaknesses, and specific drills to improve each area.`;
     ]
   );
 
-  return { status, error, sessionId, feedbackId, analyze };
+  return { status, error, sessionId, feedbackId, currentVideo, analyze, reset };
 }

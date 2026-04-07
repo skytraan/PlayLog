@@ -34,6 +34,7 @@ export function UploadArea({ status, onUpload }: UploadAreaProps) {
               onChange={(e) => {
                 const file = e.target.files?.[0];
                 if (file) onUpload(file);
+                e.target.value = "";
               }}
             />
             <button

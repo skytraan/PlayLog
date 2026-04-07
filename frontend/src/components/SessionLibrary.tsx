@@ -4,9 +4,50 @@ import { ChevronDown } from "lucide-react";
 
 interface SessionLibraryProps {
   sessions: Session[];
+  onSeek?: (seconds: number) => void;
 }
 
-export function SessionLibrary({ sessions }: SessionLibraryProps) {
+/** Parse "m:ss" or "h:mm:ss" timestamps from a string, return array of {label, seconds} */
+function extractTimestamps(text: string): Array<{ label: string; seconds: number }> {
+  const matches = [...text.matchAll(/\b(\d{1,2}):(\d{2})(?::(\d{2}))?\b/g)];
+  return matches.map((m) => {
+    const hasHours = m[3] !== undefined;
+    const hours   = hasHours ? parseInt(m[1]) : 0;
+    const minutes = hasHours ? parseInt(m[2]) : parseInt(m[1]);
+    const secs    = hasHours ? parseInt(m[3]) : parseInt(m[2]);
+    return { label: m[0], seconds: hours * 3600 + minutes * 60 + secs };
+  });
+}
+
+/** Render a feedback string with inline timestamp chips that call onSeek */
+function FeedbackText({ text, onSeek }: { text: string; onSeek?: (s: number) => void }) {
+  if (!onSeek) return <span>{text}</span>;
+
+  const timestamps = extractTimestamps(text);
+  if (timestamps.length === 0) return <span>{text}</span>;
+
+  const parts: React.ReactNode[] = [];
+  let cursor = 0;
+  for (const ts of timestamps) {
+    const idx = text.indexOf(ts.label, cursor);
+    if (idx > cursor) parts.push(text.slice(cursor, idx));
+    parts.push(
+      <button
+        key={idx}
+        onClick={() => onSeek(ts.seconds)}
+        className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-mono bg-primary/10 text-primary hover:bg-primary/20 transition-colors mx-0.5"
+      >
+        {ts.label}
+      </button>
+    );
+    cursor = idx + ts.label.length;
+  }
+  if (cursor < text.length) parts.push(text.slice(cursor));
+
+  return <span>{parts}</span>;
+}
+
+export function SessionLibrary({ sessions, onSeek }: SessionLibraryProps) {
   const [openIds, setOpenIds] = useState<Set<string>>(new Set());
 
   if (sessions.length === 0) {
@@ -89,27 +130,29 @@ export function SessionLibrary({ sessions }: SessionLibraryProps) {
                   </div>
 
                   {/* Skill Ratings */}
-                  <div>
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-                      Skill Breakdown
-                    </h4>
-                    <div className="space-y-2.5">
-                      {session.ratings.map((r) => (
-                        <div key={r.name}>
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-sm text-foreground">{r.name}</span>
-                            <span className="text-sm font-mono font-medium text-foreground">{r.score}</span>
+                  {session.ratings.length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                        Skill Breakdown
+                      </h4>
+                      <div className="space-y-2.5">
+                        {session.ratings.map((r) => (
+                          <div key={r.name}>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-sm text-foreground">{r.name}</span>
+                              <span className="text-sm font-mono font-medium text-foreground">{r.score}</span>
+                            </div>
+                            <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                              <div
+                                className="h-full rounded-full"
+                                style={{ width: `${r.score}%`, backgroundColor: ratingBarColor(r.score) }}
+                              />
+                            </div>
                           </div>
-                          <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-                            <div
-                              className="h-full rounded-full"
-                              style={{ width: `${r.score}%`, backgroundColor: ratingBarColor(r.score) }}
-                            />
-                          </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Strengths & Weaknesses */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -117,9 +160,11 @@ export function SessionLibrary({ sessions }: SessionLibraryProps) {
                       <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
                         Strengths
                       </h4>
-                      <ul className="space-y-1">
+                      <ul className="space-y-1.5">
                         {session.strengths.map((s) => (
-                          <li key={s} className="text-sm text-foreground">{s}</li>
+                          <li key={s} className="text-sm text-foreground">
+                            <FeedbackText text={s} onSeek={onSeek} />
+                          </li>
                         ))}
                       </ul>
                     </div>
@@ -127,9 +172,11 @@ export function SessionLibrary({ sessions }: SessionLibraryProps) {
                       <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
                         Weaknesses
                       </h4>
-                      <ul className="space-y-1">
+                      <ul className="space-y-1.5">
                         {session.weaknesses.map((w) => (
-                          <li key={w} className="text-sm text-foreground">{w}</li>
+                          <li key={w} className="text-sm text-foreground">
+                            <FeedbackText text={w} onSeek={onSeek} />
+                          </li>
                         ))}
                       </ul>
                     </div>
@@ -141,10 +188,10 @@ export function SessionLibrary({ sessions }: SessionLibraryProps) {
                       Recommended Drills
                     </h4>
                     <div className="space-y-1">
-                      {session.drillRecommendations.map((d, i) => (
-                        <div key={i} className="text-sm text-foreground flex items-start gap-2">
-                          <span className="text-muted-foreground font-mono text-xs mt-0.5">{i + 1}</span>
-                          {d}
+                      {session.drillRecommendations.map((d, idx) => (
+                        <div key={idx} className="text-sm text-foreground flex items-start gap-2">
+                          <span className="text-muted-foreground font-mono text-xs mt-0.5">{idx + 1}</span>
+                          <FeedbackText text={d} onSeek={onSeek} />
                         </div>
                       ))}
                     </div>

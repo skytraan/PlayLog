@@ -112,6 +112,7 @@ export const listSessionsWithFeedback = query({
           feedback: feedback ?? null,
           overallScore: analysis?.overallScore ?? null,
           technique: analysis?.technique ?? null,
+          poseAnalysis: analysis?.poseAnalysis ?? null,
         };
       })
     );

@@ -41,12 +41,20 @@ export function Progress({ userId, userName }: ProgressProps) {
   const scoreSums: Record<RatingKey, number>  = { serve: 0, forehand: 0, backhand: 0, volley: 0, footwork: 0 };
   const scoreCounts: Record<RatingKey, number> = { serve: 0, forehand: 0, backhand: 0, volley: 0, footwork: 0 };
 
-  for (const { technique, overallScore } of sessions) {
-    if (!technique || overallScore == null) continue;
-    const key = TECHNIQUE_TO_KEY[technique];
-    if (!key) continue;
-    scoreSums[key] += overallScore;
-    scoreCounts[key]++;
+  for (const { poseAnalysis } of sessions) {
+    if (!poseAnalysis) continue;
+    try {
+      const parsed = JSON.parse(poseAnalysis);
+      const results: Array<{ technique: string; overallScore: number }> = Array.isArray(parsed) ? parsed : [parsed];
+      for (const r of results) {
+        const key = TECHNIQUE_TO_KEY[r.technique];
+        if (!key || r.overallScore == null) continue;
+        scoreSums[key] += r.overallScore;
+        scoreCounts[key]++;
+      }
+    } catch {
+      // malformed poseAnalysis — skip
+    }
   }
 
   const fifaRatings: Record<RatingKey, number | null> = {
