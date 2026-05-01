@@ -29,6 +29,14 @@ export function Learn({ sport, userId }: LearnProps) {
   const effectiveSessionId: Id<"sessions"> | null =
     sessionId ?? rawSessions?.[0]?.session._id ?? null;
 
+  // Rehydrate the video from R2 when we don't have the original File in
+  // memory — covers tab switches and full reloads. The local File takes
+  // precedence (cheaper, no presign round-trip) when it's present.
+  const persistedVideoUrl = useQuery(
+    api.storage.getSessionVideoUrl,
+    !currentVideo && effectiveSessionId ? { sessionId: effectiveSessionId } : "skip"
+  );
+
   // Extract MediaPipe cue timestamps (in seconds) from the most-recent analysis
   const latestPoseAnalysis = rawSessions?.find((s) => s.session._id === effectiveSessionId)?.poseAnalysis ?? null;
   const cues: number[] = (() => {
@@ -99,14 +107,25 @@ export function Learn({ sport, userId }: LearnProps) {
   const isDone = status === "ready";
   const isError = status === "error";
 
+  // Either we have the freshly-uploaded File, or we have a persisted session
+  // whose video lives in R2 — show the player in either case so the user can
+  // keep referencing it across navigation and reloads.
+  const hasPlayableVideo = !!currentVideo || !!persistedVideoUrl;
+  const showSwitchButton =
+    hasPlayableVideo && (isDone || isError || (!currentVideo && !!persistedVideoUrl));
+
   return (
     <div className="space-y-6">
-      {/* Video player — shown once a file is selected */}
-      {currentVideo ? (
+      {/* Video player — shown when a file is selected OR a session is persisted */}
+      {hasPlayableVideo ? (
         <div className="space-y-2">
-          <VideoPlayer ref={videoPlayerRef} file={currentVideo} cues={cues} />
-          {/* Re-upload button once done or errored */}
-          {(isDone || isError) && (
+          <VideoPlayer
+            ref={videoPlayerRef}
+            file={currentVideo ?? undefined}
+            src={!currentVideo ? persistedVideoUrl ?? undefined : undefined}
+            cues={cues}
+          />
+          {showSwitchButton && (
             <button
               onClick={reset}
               className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
@@ -136,6 +155,7 @@ export function Learn({ sport, userId }: LearnProps) {
         sport={sport}
         disabled={!effectiveSessionId}
         presetPrompts={presetPrompts}
+        onSeek={handleSeek}
       />
     </div>
   );

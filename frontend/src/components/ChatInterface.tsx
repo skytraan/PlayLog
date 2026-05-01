@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { ChatMessage, Sport } from "@/types/playlog";
 import { Send } from "lucide-react";
+import { FeedbackText } from "@/lib/timestamps";
 
 interface ChatInterfaceProps {
   messages: ChatMessage[];
@@ -8,9 +9,12 @@ interface ChatInterfaceProps {
   sport: Sport;
   disabled?: boolean;
   presetPrompts?: string[];
+  /** When provided, timestamp tokens (m:ss) inside assistant replies become
+   *  buttons that seek the active video. */
+  onSeek?: (seconds: number) => void;
 }
 
-export function ChatInterface({ messages, onSend, sport: _sport, disabled = false, presetPrompts = [] }: ChatInterfaceProps) {
+export function ChatInterface({ messages, onSend, sport: _sport, disabled = false, presetPrompts = [], onSeek }: ChatInterfaceProps) {
   const [input, setInput] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -69,7 +73,11 @@ export function ChatInterface({ messages, onSend, sport: _sport, disabled = fals
                 {msg.role === "assistant" && (
                   <p className="text-[10px] font-semibold text-primary uppercase tracking-wide mb-1">Coach</p>
                 )}
-                <div className="whitespace-pre-wrap">{msg.content}</div>
+                <div className="whitespace-pre-wrap">
+                  {msg.role === "assistant"
+                    ? <FeedbackText text={msg.content} onSeek={onSeek} />
+                    : msg.content}
+                </div>
               </div>
               {msg.role === "user" && (
                 <div className="flex-shrink-0 w-7 h-7 rounded-full bg-foreground border border-border flex items-center justify-center text-sm">
