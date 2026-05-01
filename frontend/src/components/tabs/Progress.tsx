@@ -1,4 +1,5 @@
 import { api, useQuery, type Id } from "@/lib/api";
+import { Skeleton } from "@/components/ui/skeleton";
 import { PlayerCardComponent } from "@/components/PlayerCard";
 import { BadgeGrid } from "@/components/BadgeGrid";
 import { ActiveChallenge } from "@/components/ActiveChallenge";
@@ -16,8 +17,13 @@ interface ProgressProps {
 
 export function Progress({ userId, userName }: ProgressProps) {
   const rawSessions = useQuery(api.sessions.listSessionsWithFeedback, { userId });
-  const sessions = rawSessions ?? [];
+
+  if (rawSessions === undefined) return <ProgressSkeleton />;
+
+  const sessions = rawSessions;
   const totalSessions = sessions.length;
+
+  if (totalSessions === 0) return <ProgressEmptyState />;
 
   const earnedBadges = (useQuery(api.badges.getUserBadges, { userId }) ?? []).map((b) => ({
     id: b.badgeId,
@@ -138,6 +144,31 @@ export function Progress({ userId, userName }: ProgressProps) {
       </div>
 
       <BadgeGrid earnedBadges={earnedBadges} />
+    </div>
+  );
+}
+
+function ProgressSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row gap-6">
+        <Skeleton className="h-48 w-full sm:w-48 rounded-xl" />
+        <Skeleton className="h-48 flex-1 rounded-xl" />
+      </div>
+      <Skeleton className="h-8 w-full rounded-md" />
+      <Skeleton className="h-8 w-full rounded-md" />
+      <Skeleton className="h-32 w-full rounded-xl" />
+    </div>
+  );
+}
+
+function ProgressEmptyState() {
+  return (
+    <div className="text-center py-16 space-y-2">
+      <p className="text-sm font-medium text-foreground">No sessions yet</p>
+      <p className="text-xs text-muted-foreground">
+        Upload a video on the Learn tab to start tracking your progress.
+      </p>
     </div>
   );
 }

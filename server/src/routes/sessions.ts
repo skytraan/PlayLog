@@ -8,6 +8,7 @@ import {
 } from "../db/mappers.js";
 import { ApiError, rpc } from "../lib/route.js";
 import { deleteObject } from "../storage/r2.js";
+import { logger } from "../lib/logger.js";
 
 export const sessions = new Hono();
 
@@ -125,10 +126,7 @@ sessions.post(
       try {
         await deleteObject(storageId);
       } catch (err) {
-        console.warn(
-          `[deleteSession] R2 delete failed for ${storageId}; cleanup job will sweep:`,
-          err
-        );
+        logger.warn({ storageId, err }, "deleteSession: R2 delete failed; cleanup job will sweep");
       }
     }
     return null;

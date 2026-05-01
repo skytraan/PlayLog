@@ -7,6 +7,7 @@ import { ChatInterface } from "@/components/ChatInterface";
 import { VideoPlayer, VideoPlayerHandle } from "@/components/VideoPlayer";
 import { useVideoAnalysis } from "@/hooks/useVideoAnalysis";
 import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface LearnProps {
   sport: Sport;
@@ -24,6 +25,8 @@ export function Learn({ sport, userId }: LearnProps) {
     sport,
     requestedSections: sport === "tennis"
       ? ["forehand", "backhand", "serve", "footwork"]
+      : sport === "basketball"
+      ? ["shooting", "dribbling", "footwork", "defense"]
       : ["driving", "iron play", "short game", "putting"],
   });
 
@@ -204,13 +207,17 @@ export function Learn({ sport, userId }: LearnProps) {
           </div>
         )}
 
-        <SessionLibrary
-          sessions={sessions}
-          activeSessionId={effectiveSessionId ?? undefined}
-          onSeek={handleSeek}
-          onActivate={handleActivateSession}
-          onDelete={handleDeleteSession}
-        />
+        {rawSessions === undefined ? (
+          <SessionLibrarySkeleton />
+        ) : (
+          <SessionLibrary
+            sessions={sessions}
+            activeSessionId={effectiveSessionId ?? undefined}
+            onSeek={handleSeek}
+            onActivate={handleActivateSession}
+            onDelete={handleDeleteSession}
+          />
+        )}
       </div>
 
       {/* Right column: chat (sticky) */}
@@ -226,6 +233,16 @@ export function Learn({ sport, userId }: LearnProps) {
           sendError={chatError}
         />
       </div>
+    </div>
+  );
+}
+
+function SessionLibrarySkeleton() {
+  return (
+    <div className="space-y-3">
+      {[0, 1, 2].map((i) => (
+        <Skeleton key={i} className="h-16 w-full rounded-lg" />
+      ))}
     </div>
   );
 }

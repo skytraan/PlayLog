@@ -6,6 +6,7 @@
 import type { Context } from "hono";
 import type { ZodSchema } from "zod";
 import { ApiError, isApiError } from "./errors.js";
+import { logger as rootLogger } from "./logger.js";
 
 export function rpc<TArgs, TResult>(
   schema: ZodSchema<TArgs>,
@@ -34,7 +35,8 @@ export function rpc<TArgs, TResult>(
       if (isApiError(err)) {
         return c.json({ error: err.message }, err.status as 400 | 404 | 500);
       }
-      console.error("[rpc] unhandled:", err);
+      const log = (c.get("logger") as typeof rootLogger | undefined) ?? rootLogger;
+      log.error({ err }, "[rpc] unhandled error");
       return c.json({ error: "internal error" }, 500);
     }
   };

@@ -1,11 +1,4 @@
--- DEPRECATED SNAPSHOT — use server/migrations/ instead.
--- This file is kept as a reference but is no longer applied by `npm run migrate`.
---
--- Conventions:
---   * Primary keys are uuid (text-encoded on the wire as `_id`).
---   * Timestamps stored as bigint epoch-ms to match Convex's number-based time.
---   * Arrays use Postgres native text[].
---   * Indexes name-mirror Convex indexes ("by_user", "by_session", "by_email").
+-- Up Migration
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
@@ -83,3 +76,13 @@ CREATE TABLE IF NOT EXISTS feedback (
 );
 CREATE INDEX IF NOT EXISTS feedback_by_session  ON feedback (session_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS feedback_by_analysis ON feedback (analysis_id, created_at DESC);
+
+-- Down Migration
+
+DROP TABLE IF EXISTS feedback;
+DROP TABLE IF EXISTS badges;
+DROP TABLE IF EXISTS goals;
+DROP TABLE IF EXISTS messages;
+DROP TABLE IF EXISTS analyses;
+DROP TABLE IF EXISTS sessions;
+DROP TABLE IF EXISTS users;
