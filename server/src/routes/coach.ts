@@ -5,6 +5,12 @@ import { sql } from "../db/client.js";
 import { mapAnalysis, mapFeedback, mapMessage, mapSession } from "../db/mappers.js";
 import { ApiError, rpc } from "../lib/route.js";
 import { env } from "../lib/env.js";
+import {
+  buildTimeline,
+  formatTimelineForPrompt,
+  snapTimestampsInText,
+  type TimelineMoment,
+} from "../lib/timeline.js";
 
 export const coach = new Hono();
 
@@ -83,9 +89,21 @@ coach.post(
       analysis.twelveLabsResult ?? undefined
     );
 
+    // Anchor Claude to a known set of moments. Pose key-frames (frame-accurate)
+    // win over Pegasus-mentioned timestamps; Claude is forbidden from inventing
+    // numbers, and its output is post-snapped to the nearest authoritative moment.
+    const timeline = buildTimeline(analysis.poseAnalysis, analysis.twelveLabsResult);
+    const authoritativeSeconds = timeline.map((m) => m.seconds);
+    const timelineForPrompt = formatTimelineForPrompt(timeline);
+
     const userPrompt = `${sessionContext}
 
-Generate coaching feedback as JSON: a 2-3 sentence summary, an array of strengths (each with a timestamp), an array of improvements (each formatted as "issue — timestamp — fix"), and an array of drills (one per improvement).`;
+Authoritative timeline (the ONLY moments you may reference):
+${timelineForPrompt}
+
+Generate coaching feedback as JSON: a 2-3 sentence summary, an array of strengths (each with a timestamp from the timeline above), an array of improvements (each formatted as "issue — timestamp — fix"), and an array of drills (one per improvement).
+
+Hard rule: every timestamp you use MUST come from the timeline above, written in m:ss format. If a moment isn't in the timeline, describe it without a timestamp rather than guess.`;
 
     let parsed: z.infer<typeof FeedbackSchema>;
     try {
@@ -121,14 +139,24 @@ Generate coaching feedback as JSON: a 2-3 sentence summary, an array of strength
       throw toApiError(err, "Anthropic API error");
     }
 
+    // Snap any timestamps Claude emitted to the nearest authoritative moment.
+    // This catches the cases where the prompt constraint wasn't followed
+    // (Claude rounded "0:05" to "0:07", or invented a moment Pegasus mentioned
+    // approximately).
+    const snap = (s: string) => snapTimestampsInText(s, authoritativeSeconds).text;
+    const summary = snap(parsed.summary);
+    const strengths = parsed.strengths.map(snap);
+    const improvements = parsed.improvements.map(snap);
+    const drills = parsed.drills.map(snap);
+
     const [row] = await sql`
       INSERT INTO feedback (
         session_id, analysis_id, summary, strengths, improvements, drills, created_at
       ) VALUES (
-        ${sessionId}, ${analysisId}, ${parsed.summary},
-        ${sql.array(parsed.strengths)},
-        ${sql.array(parsed.improvements)},
-        ${sql.array(parsed.drills)},
+        ${sessionId}, ${analysisId}, ${summary},
+        ${sql.array(strengths)},
+        ${sql.array(improvements)},
+        ${sql.array(drills)},
         ${Date.now()}
       )
       RETURNING id
@@ -187,6 +215,18 @@ coach.post(
       VALUES (${sessionId}, 'user', ${trimmed}, ${Date.now()})
     `;
 
+    // Same grounding the feedback path uses — pose key-frames + Pegasus
+    // anchors, deduped. Constraint goes in the system prompt so it's enforced
+    // across every chat turn, and the reply is post-snapped before saving.
+    const timeline = buildTimeline(
+      latestAnalysis?.poseAnalysis,
+      latestAnalysis?.twelveLabsResult
+    );
+    const authoritativeSeconds = timeline.map((m: TimelineMoment) => m.seconds);
+    const timelineSection = timeline.length > 0
+      ? `\n\nAuthoritative timeline (the ONLY moments you may reference; m:ss):\n${formatTimelineForPrompt(timeline)}\n\nHard rule: every timestamp you use MUST come from the timeline above. If a moment isn't in the timeline, describe it without a timestamp.`
+      : "";
+
     const systemContext = latestFeedback
       ? `Sport: ${session.sport}. Focus: ${session.requestedSections.join(", ")}.\nLatest summary: ${latestFeedback.summary}`
       : buildSessionContext(
@@ -208,7 +248,7 @@ coach.post(
       const result = await getClient().messages.create({
         model: MODEL,
         max_tokens: 512,
-        system: `${COACH_SYSTEM_PROMPT}\n\n${systemContext}`,
+        system: `${COACH_SYSTEM_PROMPT}\n\n${systemContext}${timelineSection}`,
         messages,
       });
 
@@ -220,11 +260,15 @@ coach.post(
       throw toApiError(err, "Anthropic API error");
     }
 
+    const groundedReply = authoritativeSeconds.length > 0
+      ? snapTimestampsInText(reply, authoritativeSeconds).text
+      : reply;
+
     await sql`
       INSERT INTO messages (session_id, role, content, created_at)
-      VALUES (${sessionId}, 'model', ${reply}, ${Date.now()})
+      VALUES (${sessionId}, 'model', ${groundedReply}, ${Date.now()})
     `;
 
-    return reply;
+    return groundedReply;
   })
 );
