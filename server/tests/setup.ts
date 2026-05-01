@@ -7,3 +7,5 @@ process.env.R2_ENDPOINT ??= "https://test.r2.cloudflarestorage.com";
 process.env.R2_BUCKET ??= "test-bucket";
 process.env.R2_ACCESS_KEY_ID ??= "test-access";
 process.env.R2_SECRET_ACCESS_KEY ??= "test-secret";
+process.env.TWELVELABS_API_KEY ??= "test-twelvelabs-key";
+process.env.ANTHROPIC_API_KEY ??= "test-anthropic-key";

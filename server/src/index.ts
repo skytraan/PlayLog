@@ -1,7 +1,9 @@
+import { randomUUID } from "node:crypto";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { serve } from "@hono/node-server";
 import { env } from "./lib/env.js";
+import { logger } from "./lib/logger.js";
 import { users } from "./routes/users.js";
 import { sessions } from "./routes/sessions.js";
 import { analyses } from "./routes/analyses.js";
@@ -16,6 +18,21 @@ import { coach } from "./routes/coach.js";
 export const app = new Hono();
 
 app.use("*", cors({ origin: env.corsOrigin === "*" ? "*" : env.corsOrigin.split(",") }));
+
+app.use("*", async (c, next) => {
+  const reqId = c.req.header("x-request-id") ?? randomUUID();
+  const reqLogger = logger.child({ reqId });
+  c.set("reqId", reqId);
+  c.set("logger", reqLogger);
+  const start = Date.now();
+  await next();
+  reqLogger.info({
+    method: c.req.method,
+    path: c.req.path,
+    status: c.res.status,
+    durMs: Date.now() - start,
+  });
+});
 
 app.get("/health", (c) => c.json({ ok: true }));
 
@@ -36,6 +53,6 @@ app.route("/api/coach",      coach);
 // In test/import mode the entry file is loaded but we skip listen.
 if (process.env.NODE_ENV !== "test" && !process.env.SKIP_LISTEN) {
   serve({ fetch: app.fetch, port: env.port }, (info) => {
-    console.log(`✓ playlog server listening on :${info.port}`);
+    logger.info({ port: info.port }, "playlog server ready");
   });
 }

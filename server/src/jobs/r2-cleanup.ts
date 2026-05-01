@@ -7,6 +7,7 @@
 
 import { sql } from "../db/client.js";
 import { deleteObject, listAllObjects } from "../storage/r2.js";
+import { logger } from "../lib/logger.js";
 
 export interface CleanupReport {
   scannedObjects: number;
@@ -57,14 +58,20 @@ export async function runR2Cleanup(opts: { dryRun?: boolean } = {}): Promise<Cle
 async function main() {
   const dryRun = process.argv.includes("--dry-run");
   const report = await runR2Cleanup({ dryRun });
-  console.log(
-    `[r2-cleanup] scanned=${report.scannedObjects} referenced=${report.referencedKeys} ` +
-      `orphans=${report.orphans} deleted=${report.deleted} failures=${report.failures.length}` +
-      (dryRun ? " (dry-run)" : "")
+  logger.info(
+    {
+      scanned: report.scannedObjects,
+      referenced: report.referencedKeys,
+      orphans: report.orphans,
+      deleted: report.deleted,
+      failures: report.failures.length,
+      dryRun,
+    },
+    "r2-cleanup complete"
   );
   if (report.failures.length > 0) {
     for (const f of report.failures) {
-      console.error(`  failed: ${f.key} — ${f.error}`);
+      logger.error({ key: f.key, error: f.error }, "r2-cleanup delete failed");
     }
     process.exit(1);
   }
@@ -73,7 +80,7 @@ async function main() {
 // Only run main() when invoked directly, not when imported by tests.
 if (import.meta.url === `file://${process.argv[1]}`) {
   main().catch((err) => {
-    console.error("[r2-cleanup] fatal:", err);
+    logger.error({ err }, "r2-cleanup fatal");
     process.exit(1);
   });
 }
