@@ -150,3 +150,49 @@ export async function analyzeVideo(args: {
 
   return result.data;
 }
+
+// Single-call replacement for index → poll → analyze. POST /analyze accepts a
+// `video.url` directly, so we hand TwelveLabs the R2 read URL and let it pull
+// the bytes itself. Saves the 30–90s indexing wait, removes the polling loop,
+// and collapses the failure surface to one HTTP call.
+//
+// Caveat: TwelveLabs requires a "publicly accessible" URL. Presigned R2 URLs
+// usually pass; if they don't, set R2_PUBLIC_BASE_URL and presignRead returns
+// the public-CDN form instead.
+export async function analyzeDirect(args: {
+  sessionId: string;
+  analysisId: string;
+  prompt: string;
+}): Promise<string> {
+  const sessRows = await sql`
+    SELECT video_storage_id FROM sessions WHERE id = ${args.sessionId}
+  `;
+  if (sessRows.length === 0) {
+    throw new ApiError(`Session ${args.sessionId} not found`, 404);
+  }
+  const videoUrl = await presignRead(sessRows[0]!.video_storage_id as string);
+  if (!videoUrl) throw new ApiError("Could not retrieve video URL from storage", 500);
+
+  await sql`
+    UPDATE sessions SET status = 'processing' WHERE id = ${args.sessionId}
+  `;
+
+  const result = (await tlFetch("/analyze", {
+    method: "POST",
+    body: JSON.stringify({
+      video: { type: "url", url: videoUrl },
+      prompt: args.prompt,
+      stream: false,
+    }),
+  })) as { data: string };
+
+  await sql`
+    UPDATE analyses SET twelve_labs_result = ${result.data}
+    WHERE id = ${args.analysisId}
+  `;
+  await sql`
+    UPDATE sessions SET status = 'complete' WHERE id = ${args.sessionId}
+  `;
+
+  return result.data;
+}

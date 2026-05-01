@@ -178,6 +178,14 @@ export const api = {
       { analysisId: Id<"analyses">; videoId: string; prompt: string },
       string
     >("twelvelabs", "analyzeVideo"),
+    analyzeDirect: defAction<
+      {
+        sessionId: Id<"sessions">;
+        analysisId: Id<"analyses">;
+        prompt: string;
+      },
+      string
+    >("twelvelabs", "analyzeDirect"),
   },
 
   coach: {
