@@ -5,9 +5,32 @@ import { Target, Pencil, X } from "lucide-react";
 interface OvrGoalProps {
   userId: Id<"users">;
   currentOvr: number;
+  totalSessions?: number;
+  streak?: number;
+  earnedBadgesCount?: number;
+  totalBadges?: number;
 }
 
-export function OvrGoal({ userId, currentOvr }: OvrGoalProps) {
+function MiniStat({ icon, label, value }: { icon: string; label: string; value: string | number }) {
+  return (
+    <div>
+      <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-1">
+        <span className="text-sm">{icon}</span>
+        {label}
+      </div>
+      <div className="text-xl font-bold font-mono text-foreground">{value}</div>
+    </div>
+  );
+}
+
+export function OvrGoal({
+  userId,
+  currentOvr,
+  totalSessions = 0,
+  streak = 0,
+  earnedBadgesCount = 0,
+  totalBadges = 0,
+}: OvrGoalProps) {
   const savedGoal = useQuery(api.goals.getGoal, { userId });
   const saveGoal = useMutation(api.goals.setGoal);
 
@@ -18,7 +41,6 @@ export function OvrGoal({ userId, currentOvr }: OvrGoalProps) {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  // Pre-fill inputs when editing an existing goal
   useEffect(() => {
     if (editing && savedGoal) {
       setTargetInput(String(savedGoal.targetOvr));
@@ -78,7 +100,7 @@ export function OvrGoal({ userId, currentOvr }: OvrGoalProps) {
   if (savedGoal === undefined) return null;
 
   return (
-    <div className="border border-border rounded-lg bg-card overflow-hidden">
+    <div className="bg-card border border-border rounded-2xl overflow-hidden h-full flex flex-col">
       <div className="px-5 py-4 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Target className="h-4 w-4 text-primary" />
@@ -91,10 +113,10 @@ export function OvrGoal({ userId, currentOvr }: OvrGoalProps) {
         )}
       </div>
 
-      <div className="px-5 py-4">
+      <div className="px-5 py-4 flex-1 flex flex-col">
         {!savedGoal && !editing && (
-          <div className="text-center py-4">
-            <p className="text-sm text-muted-foreground mb-3">Set a target OVR score to work towards.</p>
+          <div className="flex-1 flex flex-col items-center justify-center py-4">
+            <p className="text-sm text-muted-foreground mb-3 text-center">Set a target OVR score to work towards.</p>
             <button
               onClick={() => setEditing(true)}
               className="px-4 py-1.5 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
@@ -117,11 +139,10 @@ export function OvrGoal({ userId, currentOvr }: OvrGoalProps) {
                 value={targetInput}
                 onChange={(e) => { setTargetInput(e.target.value); setErrors((p) => ({ ...p, target: undefined })); }}
                 placeholder="e.g. 75"
-                className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-secondary text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
               />
               {errors.target && <p className="mt-1 text-xs text-destructive">{errors.target}</p>}
             </div>
-
             <div>
               <label className="block text-xs font-medium text-muted-foreground mb-1.5">Deadline</label>
               <input
@@ -129,25 +150,22 @@ export function OvrGoal({ userId, currentOvr }: OvrGoalProps) {
                 value={deadlineInput}
                 min={new Date().toISOString().split("T")[0]}
                 onChange={(e) => { setDeadlineInput(e.target.value); setErrors((p) => ({ ...p, deadline: undefined })); }}
-                className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-secondary text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
               />
               {errors.deadline && <p className="mt-1 text-xs text-destructive">{errors.deadline}</p>}
             </div>
-
-            {saveError && (
-              <p className="text-xs text-destructive">{saveError}</p>
-            )}
+            {saveError && <p className="text-xs text-destructive">{saveError}</p>}
             <div className="flex gap-2">
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="flex-1 px-4 py-2 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50"
+                className="flex-1 px-4 py-2 text-sm font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50"
               >
                 {saving ? "Saving…" : "Save"}
               </button>
               <button
                 onClick={handleCancel}
-                className="px-4 py-2 text-sm font-medium rounded-md bg-secondary text-foreground hover:bg-accent transition-colors"
+                className="px-4 py-2 text-sm font-medium rounded-lg bg-secondary text-foreground hover:bg-accent transition-colors"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -156,38 +174,52 @@ export function OvrGoal({ userId, currentOvr }: OvrGoalProps) {
         )}
 
         {savedGoal && !editing && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-4 flex-1">
+            {/* Target + deadline */}
+            <div className="flex items-start justify-between">
               <div>
-                <p className="text-xs text-muted-foreground">Target</p>
-                <p className="text-2xl font-bold font-mono text-foreground">{savedGoal.targetOvr}</p>
+                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">OVR Goal</p>
+                <p className="text-2xl font-bold font-mono text-foreground mt-0.5">{savedGoal.targetOvr}</p>
               </div>
               <div className="text-right">
-                <p className="text-xs text-muted-foreground">Deadline</p>
-                <p className="text-sm font-medium text-foreground">
-                  {new Date(savedGoal.deadline).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                </p>
-                <p className={`text-xs font-medium mt-0.5 ${daysLeft !== null && daysLeft <= 7 ? "text-destructive" : "text-muted-foreground"}`}>
-                  {daysLeft !== null && daysLeft > 0 ? `${daysLeft} day${daysLeft !== 1 ? "s" : ""} left` : "Deadline passed"}
-                </p>
+                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Current</p>
+                <p className="text-2xl font-bold font-mono text-primary mt-0.5">{currentOvr || "—"}</p>
               </div>
             </div>
 
+            {/* Progress bar */}
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs text-muted-foreground">Progress</span>
-                <span className="text-xs font-medium text-foreground">{currentOvr} / {savedGoal.targetOvr}</span>
-              </div>
-              <div className="h-2 bg-secondary rounded-full overflow-hidden">
+              <div className="relative mb-1.5">
+                <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-emerald-700 to-emerald-400 rounded-full transition-all duration-700 ease-out"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
                 <div
-                  className="h-full rounded-full transition-all duration-500"
-                  style={{
-                    width: `${progress}%`,
-                    backgroundColor: progress >= 100 ? "#22c55e" : progress >= 60 ? "#eab308" : "#3b82f6",
-                  }}
-                />
+                  className="absolute -top-1 -translate-x-1/2 transition-all duration-700"
+                  style={{ left: `${Math.min(100, Math.max(0, progress))}%` }}
+                >
+                  <div className="w-4 h-4 rounded-full bg-primary border-2 border-background shadow" />
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">{progress}% of the way there</p>
+              <div className="flex justify-between text-[11px] font-mono text-muted-foreground">
+                <span>0 · start</span>
+                <span className="text-foreground font-semibold">{currentOvr} · now</span>
+                <span>{savedGoal.targetOvr} · goal</span>
+              </div>
+              {daysLeft !== null && (
+                <p className={`text-[11px] mt-1 ${daysLeft <= 7 ? "text-destructive" : "text-muted-foreground"}`}>
+                  {daysLeft > 0 ? `${daysLeft} day${daysLeft !== 1 ? "s" : ""} until deadline` : "Deadline passed"}
+                </p>
+              )}
+            </div>
+
+            {/* Mini stats */}
+            <div className="grid grid-cols-3 gap-3 pt-4 border-t border-border mt-auto">
+              <MiniStat icon="📹" label="Sessions" value={totalSessions} />
+              <MiniStat icon="🔥" label="Streak" value={streak > 0 ? `${streak} wk` : "—"} />
+              <MiniStat icon="🏅" label="Badges" value={totalBadges > 0 ? `${earnedBadgesCount}/${totalBadges}` : earnedBadgesCount} />
             </div>
           </div>
         )}

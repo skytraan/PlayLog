@@ -12,7 +12,7 @@
     --card: 222 18% 11%;
     --card-foreground: 210 20% 96%;
 
-    --popover: 222 18% 11%;
+    --popover: 222 18% 13%;
     --popover-foreground: 210 20% 96%;
 
     --primary: 153 60% 40%;
@@ -22,7 +22,7 @@
     --secondary-foreground: 210 20% 96%;
 
     --muted: 222 16% 16%;
-    --muted-foreground: 215 15% 55%;
+    --muted-foreground: 215 15% 60%;
 
     --accent: 222 16% 20%;
     --accent-foreground: 210 20% 96%;
@@ -63,4 +63,9 @@
   body {
     @apply bg-background text-foreground font-sans antialiased;
   }
+
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: hsl(222 14% 22%); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: hsl(222 14% 30%); }
 }

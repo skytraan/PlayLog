@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { api, useAction, useMutation, useQuery, type Id } from "@/lib/api";
 import { Sport, ChatMessage, Session } from "@/types/playlog";
 import { SessionLibrary } from "@/components/SessionLibrary";
@@ -27,22 +27,18 @@ export function Learn({ sport, userId }: LearnProps) {
       : ["driving", "iron play", "short game", "putting"],
   });
 
-  // When the user clicks "Upload a different video", reset() clears sessionId
-  // and currentVideo — but effectiveSessionId would otherwise fall back to the
-  // latest history session, snapping the player right back to the previous
-  // video. This flag forces the upload area open until the next upload.
   const [forceUpload, setForceUpload] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
+  const [isSending, setIsSending] = useState(false);
+  // Track which session the user has selected in the library
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
 
   const rawSessions = useQuery(api.sessions.listSessionsWithFeedback, { userId });
 
+  // Priority: newly-uploaded session > user-selected > most recent
   const effectiveSessionId: Id<"sessions"> | null =
-    sessionId ?? rawSessions?.[0]?.session._id ?? null;
+    sessionId ?? (selectedSessionId as Id<"sessions"> | null) ?? rawSessions?.[0]?.session._id ?? null;
 
-  // Rehydrate the video from R2 when we don't have the original File in
-  // memory — covers tab switches and full reloads. The local File takes
-  // precedence (cheaper, no presign round-trip) when it's present. Skip the
-  // query entirely when the user is asking to swap videos.
   const persistedVideoUrl = useQuery(
     api.storage.getSessionVideoUrl,
     !forceUpload && !currentVideo && effectiveSessionId
@@ -57,16 +53,16 @@ export function Learn({ sport, userId }: LearnProps) {
 
   const handleUpload = async (file: File) => {
     setForceUpload(false);
+    setSelectedSessionId(null);
     await analyze(file);
   };
 
-  // Deleting the active session would leave the player pointed at a row that
-  // no longer exists; reset local state to drop back into upload mode.
   const handleDeleteSession = async (id: string) => {
     try {
       await deleteSession({ sessionId: id as Id<"sessions"> });
       if (id === effectiveSessionId) {
         setForceUpload(true);
+        setSelectedSessionId(null);
         reset();
       }
     } catch (err) {
@@ -79,7 +75,11 @@ export function Learn({ sport, userId }: LearnProps) {
     }
   };
 
-  // Extract MediaPipe cue timestamps (in seconds) from the most-recent analysis
+  const handleActivateSession = (id: string) => {
+    setSelectedSessionId(id);
+    setForceUpload(false);
+  };
+
   const latestPoseAnalysis = rawSessions?.find((s) => s.session._id === effectiveSessionId)?.poseAnalysis ?? null;
   const cues: number[] = (() => {
     if (!latestPoseAnalysis) return [];
@@ -131,17 +131,23 @@ export function Learn({ sport, userId }: LearnProps) {
     timestamp: new Date(msg.createdAt).toISOString(),
   }));
 
+  // Clear isSending when new messages arrive
+  useEffect(() => {
+    if (messages.length > 0) setIsSending(false);
+  }, [messages.length]);
+
   const handleSendMessage = async (content: string) => {
     if (!effectiveSessionId) return;
     setChatError(null);
+    setIsSending(true);
     try {
       await askCoach({ sessionId: effectiveSessionId, userMessage: content });
     } catch {
       setChatError("Message failed to send. Please try again.");
+      setIsSending(false);
     }
   };
 
-  // Seek handler passed to SessionLibrary so timestamp chips can jump the video
   const handleSeek = (seconds: number) => {
     videoPlayerRef.current?.seekTo(seconds);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -150,76 +156,84 @@ export function Learn({ sport, userId }: LearnProps) {
   const isDone = status === "ready";
   const isError = status === "error";
 
-  // Either we have the freshly-uploaded File, or we have a persisted session
-  // whose video lives in R2 — show the player in either case so the user can
-  // keep referencing it across navigation and reloads.
   const hasPlayableVideo = !forceUpload && (!!currentVideo || !!persistedVideoUrl);
   const showSwitchButton =
     hasPlayableVideo && (isDone || isError || (!currentVideo && !!persistedVideoUrl));
 
   return (
-    <div className="space-y-6">
-      {/* Video player — shown when a file is selected OR a session is persisted */}
-      {hasPlayableVideo ? (
-        <div className="space-y-2">
-          <VideoPlayer
-            ref={videoPlayerRef}
-            file={currentVideo ?? undefined}
-            src={!currentVideo ? persistedVideoUrl ?? undefined : undefined}
-            cues={cues}
-          />
-          {showSwitchButton && (
+    <div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-6">
+      {/* Left column: video + session library */}
+      <div className="space-y-6 min-w-0">
+        {hasPlayableVideo ? (
+          <div className="space-y-2">
+            <VideoPlayer
+              ref={videoPlayerRef}
+              file={currentVideo ?? undefined}
+              src={!currentVideo ? persistedVideoUrl ?? undefined : undefined}
+              cues={cues}
+            />
+            {showSwitchButton && (
+              <button
+                onClick={handleSwitchVideo}
+                className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
+              >
+                Upload a different video
+              </button>
+            )}
+          </div>
+        ) : (
+          <UploadArea status={status} onUpload={handleUpload} />
+        )}
+
+        {currentVideo && status !== "idle" && !isDone && !isError && (
+          <ProcessingSteps status={status} />
+        )}
+
+        {isError && error && (
+          <div className="border border-destructive/30 bg-destructive/5 rounded-2xl px-4 py-3 flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-medium text-destructive">Analysis failed</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{error}</p>
+            </div>
             <button
               onClick={handleSwitchVideo}
-              className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
+              className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors whitespace-nowrap flex-shrink-0"
             >
-              Upload a different video
+              Try again
             </button>
-          )}
-        </div>
-      ) : (
-        <UploadArea status={status} onUpload={handleUpload} />
-      )}
-
-      {/* Processing status overlay when video is selected but not yet ready */}
-      {currentVideo && status !== "idle" && !isDone && !isError && (
-        <ProcessingSteps status={status} />
-      )}
-
-      {error && (
-        <div className="border border-destructive/30 bg-destructive/5 rounded-lg px-4 py-3 flex items-start justify-between gap-3">
-          <div>
-            <p className="text-xs font-medium text-destructive">Analysis failed</p>
-            <p className="text-xs text-muted-foreground mt-0.5">{error}</p>
           </div>
-          <button
-            onClick={handleSwitchVideo}
-            className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors whitespace-nowrap flex-shrink-0"
-          >
-            Try again
-          </button>
-        </div>
-      )}
+        )}
 
-      <SessionLibrary sessions={sessions} onSeek={handleSeek} onDelete={handleDeleteSession} />
+        <SessionLibrary
+          sessions={sessions}
+          activeSessionId={effectiveSessionId ?? undefined}
+          onSeek={handleSeek}
+          onActivate={handleActivateSession}
+          onDelete={handleDeleteSession}
+        />
+      </div>
 
-      <ChatInterface
-        messages={messages}
-        onSend={handleSendMessage}
-        sport={sport}
-        disabled={!effectiveSessionId}
-        presetPrompts={presetPrompts}
-        onSeek={handleSeek}
-        sendError={chatError}
-      />
+      {/* Right column: chat (sticky) */}
+      <div className="sticky top-24 self-start">
+        <ChatInterface
+          messages={messages}
+          onSend={handleSendMessage}
+          sport={sport}
+          disabled={!effectiveSessionId}
+          isSending={isSending}
+          presetPrompts={presetPrompts}
+          onSeek={handleSeek}
+          sendError={chatError}
+        />
+      </div>
     </div>
   );
 }
 
-const STEPS: Array<{ key: string; label: string }> = [
-  { key: "uploading", label: "Uploading video" },
-  { key: "analyzing", label: "Analyzing with Pegasus" },
-  { key: "scoring",   label: "Generating coaching feedback" },
+const STEPS: Array<{ key: string; label: string; detail: string }> = [
+  { key: "uploading", label: "Uploading video", detail: "Encrypted transfer to R2 storage" },
+  { key: "analyzing", label: "Analyzing with Pegasus", detail: "Identifying strokes, positions, intent" },
+  { key: "scoring",   label: "Generating coaching feedback", detail: "Cross-referencing technique guides" },
 ];
 
 const STATUS_ORDER = ["uploading", "analyzing", "scoring", "ready"];
@@ -227,19 +241,28 @@ const STATUS_ORDER = ["uploading", "analyzing", "scoring", "ready"];
 function ProcessingSteps({ status }: { status: string }) {
   const currentIndex = STATUS_ORDER.indexOf(status);
   return (
-    <div className="border border-border rounded-lg bg-card px-4 py-3 space-y-2">
+    <div className="bg-card border border-border rounded-2xl px-5 py-4 space-y-3">
       {STEPS.map((step, i) => {
         const done = i < currentIndex;
         const active = STATUS_ORDER[currentIndex] === step.key;
         return (
-          <div key={step.key} className="flex items-center gap-2.5 text-xs">
-            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+          <div key={step.key} className="flex items-start gap-3 text-xs">
+            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1 ${
               done ? "bg-primary" : active ? "bg-primary animate-pulse" : "bg-border"
             }`} />
-            <span className={done || active ? "text-foreground" : "text-muted-foreground"}>
-              {step.label}
-            </span>
-            {done && <span className="text-primary ml-auto">✓</span>}
+            <div className="flex-1">
+              <div className={done || active ? "text-foreground font-medium" : "text-muted-foreground"}>
+                {step.label}
+              </div>
+              <div className="text-[11px] text-muted-foreground mt-0.5">{step.detail}</div>
+            </div>
+            {done && <span className="text-primary text-sm">✓</span>}
+            {active && (
+              <svg className="animate-spin h-3.5 w-3.5 text-primary flex-shrink-0" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeOpacity="0.25" />
+                <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+              </svg>
+            )}
           </div>
         );
       })}

@@ -19,7 +19,7 @@ const sportIcons: Record<string, string> = {
   basketball: "🏀",
 };
 
-const comingSoonSports = ["golf", "basketball"];
+const comingSoonSports = ["golf"];
 
 export function ProfileSwitcher({ profiles, activeProfile, onSwitch }: ProfileSwitcherProps) {
   const allOptions = [
