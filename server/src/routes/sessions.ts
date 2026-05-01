@@ -7,6 +7,7 @@ import {
   mapSession,
 } from "../db/mappers.js";
 import { ApiError, rpc } from "../lib/route.js";
+import { deleteObject } from "../storage/r2.js";
 
 export const sessions = new Hono();
 
@@ -103,6 +104,34 @@ sessions.post(
       ORDER BY created_at DESC
     `;
     return rows.map(mapSession);
+  })
+);
+
+// Delete a session: drop the DB row (FK CASCADE handles analyses/messages/
+// feedback) and best-effort delete the R2 object. R2 failures are logged but
+// not surfaced — the nightly cleanup job will sweep any orphan we leave.
+sessions.post(
+  "/deleteSession",
+  rpc(SessionIdArgs, async ({ sessionId }) => {
+    const rows = await sql`
+      DELETE FROM sessions WHERE id = ${sessionId}
+      RETURNING video_storage_id
+    `;
+    if (rows.length === 0) {
+      throw new ApiError(`Session ${sessionId} not found`, 404);
+    }
+    const storageId = rows[0]!.video_storage_id as string | null;
+    if (storageId) {
+      try {
+        await deleteObject(storageId);
+      } catch (err) {
+        console.warn(
+          `[deleteSession] R2 delete failed for ${storageId}; cleanup job will sweep:`,
+          err
+        );
+      }
+    }
+    return null;
   })
 );
 

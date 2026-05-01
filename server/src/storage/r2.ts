@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import {
   DeleteObjectCommand,
   GetObjectCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
@@ -59,4 +60,26 @@ export async function deleteObject(storageId: string): Promise<void> {
       Key: storageId,
     })
   );
+}
+
+// Paginated list of every object key under `prefix`. The cleanup job uses this
+// to diff R2 against the sessions table; nothing in the request path should
+// call this (a full-bucket list is slow and not free).
+export async function listAllObjects(prefix = "videos/"): Promise<string[]> {
+  const keys: string[] = [];
+  let continuationToken: string | undefined;
+  do {
+    const res = await s3.send(
+      new ListObjectsV2Command({
+        Bucket: env.r2.bucket,
+        Prefix: prefix,
+        ContinuationToken: continuationToken,
+      })
+    );
+    for (const obj of res.Contents ?? []) {
+      if (obj.Key) keys.push(obj.Key);
+    }
+    continuationToken = res.IsTruncated ? res.NextContinuationToken : undefined;
+  } while (continuationToken);
+  return keys;
 }

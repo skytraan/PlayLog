@@ -8,6 +8,7 @@
     "start": "tsx --env-file=.env src/index.ts",
     "build": "tsc -p tsconfig.json",
     "migrate": "tsx --env-file=.env src/db/migrate.ts",
+    "cleanup-r2": "tsx --env-file=.env src/jobs/r2-cleanup.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },

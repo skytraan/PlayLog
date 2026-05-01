@@ -6,10 +6,12 @@ import { FeedbackText } from "@/lib/timestamps";
 interface SessionLibraryProps {
   sessions: Session[];
   onSeek?: (seconds: number) => void;
+  onDelete?: (sessionId: string) => Promise<void> | void;
 }
 
-export function SessionLibrary({ sessions, onSeek }: SessionLibraryProps) {
+export function SessionLibrary({ sessions, onSeek, onDelete }: SessionLibraryProps) {
   const [openIds, setOpenIds] = useState<Set<string>>(new Set());
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   if (sessions.length === 0) {
     return (
@@ -165,6 +167,26 @@ export function SessionLibrary({ sessions, onSeek }: SessionLibraryProps) {
                         Next Session Challenge
                       </h4>
                       <p className="text-sm text-foreground">{session.nextChallenge}</p>
+                    </div>
+                  )}
+
+                  {onDelete && (
+                    <div className="pt-2 border-t border-border">
+                      <button
+                        disabled={deletingId === session.id}
+                        onClick={async () => {
+                          if (!window.confirm("Delete this session? The video file will also be removed.")) return;
+                          setDeletingId(session.id);
+                          try {
+                            await onDelete(session.id);
+                          } finally {
+                            setDeletingId(null);
+                          }
+                        }}
+                        className="text-xs text-destructive hover:underline disabled:opacity-50 disabled:no-underline"
+                      >
+                        {deletingId === session.id ? "Deleting…" : "Delete session"}
+                      </button>
                     </div>
                   )}
                 </div>
