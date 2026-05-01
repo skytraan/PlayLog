@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
-import { api, useMutation, useQuery, type Id } from "@/lib/api";
+import { api, useMutation, useQuery } from "@/lib/api";
 import { Target, Pencil, X } from "lucide-react";
 
 interface OvrGoalProps {
-  userId: Id<"users">;
   currentOvr: number;
   totalSessions?: number;
   streak?: number;
@@ -24,14 +23,13 @@ function MiniStat({ icon, label, value }: { icon: string; label: string; value: 
 }
 
 export function OvrGoal({
-  userId,
   currentOvr,
   totalSessions = 0,
   streak = 0,
   earnedBadgesCount = 0,
   totalBadges = 0,
 }: OvrGoalProps) {
-  const savedGoal = useQuery(api.goals.getGoal, { userId });
+  const savedGoal = useQuery(api.goals.getGoal, {});
   const saveGoal = useMutation(api.goals.setGoal);
 
   const [editing, setEditing] = useState(false);
@@ -73,7 +71,7 @@ export function OvrGoal({
     setSaving(true);
     setSaveError(null);
     try {
-      await saveGoal({ userId, targetOvr: Number(targetInput), deadline: deadlineInput });
+      await saveGoal({ targetOvr: Number(targetInput), deadline: deadlineInput });
       setEditing(false);
       setErrors({});
     } catch {

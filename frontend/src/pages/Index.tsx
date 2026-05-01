@@ -1,7 +1,15 @@
-import { useState, useEffect } from "react";
-import { api, useQuery, type Id } from "@/lib/api";
+import { useEffect, useState } from "react";
+import {
+  api,
+  getAuthToken,
+  onUnauthorized,
+  setAuthToken,
+  useQuery,
+  type Id,
+} from "@/lib/api";
 import AppLayout from "@/components/AppLayout";
 import { Onboarding, UserProfile } from "@/components/Onboarding";
+import { Login } from "@/components/Login";
 
 const STORAGE_KEY = "playlog_user";
 
@@ -22,15 +30,14 @@ function clearStored() {
   localStorage.removeItem(STORAGE_KEY);
 }
 
-// Inner component so we can conditionally run the verification query
+// Inner component so we can conditionally run the verification query.
+// Verifies the stored token is still valid by calling /api/auth/me — if the
+// server rejects it (token revoked, secret rotated), we drop back to login.
 function VerifiedApp({ stored, onInvalid }: { stored: UserProfile; onInvalid: () => void }) {
-  const result = useQuery(api.users.findUser, { userId: stored.userId as Id<"users"> });
+  const result = useQuery(api.auth.me, {});
 
   useEffect(() => {
-    // result === null means query ran and user doesn't exist — clear and re-onboard
-    // result === undefined means still loading — don't act yet
     if (result === null) {
-      clearStored();
       onInvalid();
     }
   }, [result, onInvalid]);
@@ -38,22 +45,62 @@ function VerifiedApp({ stored, onInvalid }: { stored: UserProfile; onInvalid: ()
   if (result === undefined) return null; // loading
   if (result === null) return null;      // about to redirect
 
-  return <AppLayout user={stored} />;
+  // Reconcile any stale fields the verified server response disagrees with.
+  const reconciled: UserProfile = {
+    ...stored,
+    userId: result._id as Id<"users">,
+    name: result.name,
+    email: result.email,
+  };
+  return <AppLayout user={reconciled} />;
 }
+
+type AuthScreen = "login" | "signup";
 
 const Index = () => {
   const [user, setUser] = useState<UserProfile | null>(loadStored);
+  const [screen, setScreen] = useState<AuthScreen>(() =>
+    // First-time visitors land on signup; returning visitors who got logged
+    // out (token expired) land on login.
+    getAuthToken() && !loadStored() ? "login" : "signup"
+  );
+
+  useEffect(() => {
+    return onUnauthorized(() => {
+      clearStored();
+      setAuthToken(null);
+      setUser(null);
+      setScreen("login");
+    });
+  }, []);
 
   const handleComplete = (profile: UserProfile) => {
     saveStored(profile);
     setUser(profile);
   };
 
+  const handleInvalid = () => {
+    clearStored();
+    setAuthToken(null);
+    setUser(null);
+    setScreen("login");
+  };
+
   if (!user) {
-    return <Onboarding onComplete={handleComplete} />;
+    return screen === "login" ? (
+      <Login
+        onComplete={handleComplete}
+        onSwitchToSignup={() => setScreen("signup")}
+      />
+    ) : (
+      <Onboarding
+        onComplete={handleComplete}
+        onSwitchToLogin={() => setScreen("login")}
+      />
+    );
   }
 
-  return <VerifiedApp stored={user} onInvalid={() => setUser(null)} />;
+  return <VerifiedApp stored={user} onInvalid={handleInvalid} />;
 };
 
 export default Index;

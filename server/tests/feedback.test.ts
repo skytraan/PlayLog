@@ -4,13 +4,14 @@ vi.mock("../src/db/client.js", () => import("./helpers/sql-mock.js"));
 
 import { queueRows, resetSqlMock } from "./helpers/sql-mock.js";
 import { feedback } from "../src/routes/feedback.js";
+import { authHeaders } from "./helpers/auth.js";
 
 beforeEach(() => resetSqlMock());
 
 async function post(path: string, body: unknown) {
   return feedback.request(path, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders(),
     body: JSON.stringify(body),
   });
 }

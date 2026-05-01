@@ -2,15 +2,15 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { sql } from "../db/client.js";
 import { mapBadge } from "../db/mappers.js";
-import { rpc } from "../lib/route.js";
+import { authedRpc } from "../lib/route.js";
 
 export const badges = new Hono();
 
-const UserIdArgs = z.object({ userId: z.string() });
+const NoArgs = z.object({});
 
 badges.post(
   "/getUserBadges",
-  rpc(UserIdArgs, async ({ userId }) => {
+  authedRpc(NoArgs, async (_args, { userId }) => {
     const rows = await sql`
       SELECT * FROM badges WHERE user_id = ${userId}
     `;
@@ -40,7 +40,7 @@ interface ScoredSession {
 
 badges.post(
   "/checkAndAwardBadges",
-  rpc(UserIdArgs, async ({ userId }) => {
+  authedRpc(NoArgs, async (_args, { userId }) => {
     // Sessions joined with the latest analysis per session, oldest first so
     // trend-based checks see the chronological order.
     const rows = await sql`

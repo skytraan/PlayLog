@@ -6,7 +6,7 @@ import {
   mapFeedback,
   mapSession,
 } from "../db/mappers.js";
-import { ApiError, rpc } from "../lib/route.js";
+import { ApiError, authedRpc } from "../lib/route.js";
 import { deleteObject } from "../storage/r2.js";
 import { logger } from "../lib/logger.js";
 
@@ -15,7 +15,6 @@ export const sessions = new Hono();
 const StatusEnum = z.enum(["uploading", "processing", "complete", "error"]);
 
 const CreateSessionArgs = z.object({
-  userId: z.string(),
   sport: z.string(),
   videoStorageId: z.string(),
   requestedSections: z.array(z.string()),
@@ -23,24 +22,24 @@ const CreateSessionArgs = z.object({
 
 sessions.post(
   "/createSession",
-  rpc(CreateSessionArgs, async (args) => {
+  authedRpc(CreateSessionArgs, async (args, { userId }) => {
     if (!args.sport.trim()) throw new ApiError("sport is required");
     if (args.requestedSections.length === 0) {
       throw new ApiError("at least one section must be requested");
     }
 
     const userExists = await sql`
-      SELECT 1 FROM users WHERE id = ${args.userId}
+      SELECT 1 FROM users WHERE id = ${userId}
     `;
     if (userExists.length === 0) {
-      throw new ApiError(`User ${args.userId} not found`, 404);
+      throw new ApiError(`User ${userId} not found`, 404);
     }
 
     const [row] = await sql`
       INSERT INTO sessions (
         user_id, sport, video_storage_id, requested_sections, status, created_at
       ) VALUES (
-        ${args.userId},
+        ${userId},
         ${args.sport.trim()},
         ${args.videoStorageId},
         ${sql.array(args.requestedSections)},
@@ -61,17 +60,17 @@ const UpdateStatusArgs = z.object({
 
 sessions.post(
   "/updateSessionStatus",
-  rpc(UpdateStatusArgs, async ({ sessionId, status, errorMessage }) => {
+  authedRpc(UpdateStatusArgs, async ({ sessionId, status, errorMessage }, { userId }) => {
     const result =
       errorMessage === undefined
         ? await sql`
             UPDATE sessions SET status = ${status}
-            WHERE id = ${sessionId}
+            WHERE id = ${sessionId} AND user_id = ${userId}
             RETURNING id
           `
         : await sql`
             UPDATE sessions SET status = ${status}, error_message = ${errorMessage}
-            WHERE id = ${sessionId}
+            WHERE id = ${sessionId} AND user_id = ${userId}
             RETURNING id
           `;
     if (result.length === 0) {
@@ -85,8 +84,10 @@ const SessionIdArgs = z.object({ sessionId: z.string() });
 
 sessions.post(
   "/getSession",
-  rpc(SessionIdArgs, async ({ sessionId }) => {
-    const rows = await sql`SELECT * FROM sessions WHERE id = ${sessionId}`;
+  authedRpc(SessionIdArgs, async ({ sessionId }, { userId }) => {
+    const rows = await sql`
+      SELECT * FROM sessions WHERE id = ${sessionId} AND user_id = ${userId}
+    `;
     if (rows.length === 0) {
       throw new ApiError(`Session ${sessionId} not found`, 404);
     }
@@ -94,11 +95,9 @@ sessions.post(
   })
 );
 
-const UserIdArgs = z.object({ userId: z.string() });
-
 sessions.post(
   "/listSessions",
-  rpc(UserIdArgs, async ({ userId }) => {
+  authedRpc(z.object({}), async (_args, { userId }) => {
     const rows = await sql`
       SELECT * FROM sessions
       WHERE user_id = ${userId}
@@ -113,9 +112,9 @@ sessions.post(
 // not surfaced — the nightly cleanup job will sweep any orphan we leave.
 sessions.post(
   "/deleteSession",
-  rpc(SessionIdArgs, async ({ sessionId }) => {
+  authedRpc(SessionIdArgs, async ({ sessionId }, { userId }) => {
     const rows = await sql`
-      DELETE FROM sessions WHERE id = ${sessionId}
+      DELETE FROM sessions WHERE id = ${sessionId} AND user_id = ${userId}
       RETURNING video_storage_id
     `;
     if (rows.length === 0) {
@@ -137,7 +136,7 @@ sessions.post(
 // + latest analysis for each session in one round-trip via lateral subqueries.
 sessions.post(
   "/listSessionsWithFeedback",
-  rpc(UserIdArgs, async ({ userId }) => {
+  authedRpc(z.object({}), async (_args, { userId }) => {
     const rows = await sql`
       SELECT
         s.*,

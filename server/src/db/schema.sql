@@ -74,7 +74,7 @@ CREATE INDEX IF NOT EXISTS badges_by_user ON badges (user_id);
 CREATE TABLE IF NOT EXISTS feedback (
   id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   session_id    uuid NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
-  analysis_id   uuid NOT NULL REFERENCES analyses(id) ON DELETE CASCADE,
+  analysis_id   uuid NOT NULL REFERENCES analyses(id) ON DELETE CASCADE UNIQUE,
   summary       text NOT NULL,
   strengths     text[] NOT NULL,
   improvements  text[] NOT NULL,

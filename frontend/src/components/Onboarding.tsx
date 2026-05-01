@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { api, useMutation, type Id } from "@/lib/api";
+import { api, setAuthToken, useMutation, type Id } from "@/lib/api";
 import { FifaPlayerCard } from "@/components/FifaPlayerCard";
 
 export interface UserProfile {
@@ -12,6 +12,7 @@ export interface UserProfile {
 
 interface OnboardingProps {
   onComplete: (profile: UserProfile) => void;
+  onSwitchToLogin?: () => void;
 }
 
 // ── Data ──────────────────────────────────────────────────────────────────────
@@ -87,7 +88,7 @@ function NavButtons({
 
 // ── Step components ───────────────────────────────────────────────────────────
 
-function StepWelcome({ onNext }: { onNext: () => void }) {
+function StepWelcome({ onNext, onSwitchToLogin }: { onNext: () => void; onSwitchToLogin?: () => void }) {
   return (
     <div>
       <StepHeader
@@ -112,6 +113,15 @@ function StepWelcome({ onNext }: { onNext: () => void }) {
       </div>
       <NavButtons onNext={onNext} nextLabel="Get started" />
       <p className="mt-4 text-[11px] text-muted-foreground text-center">Free to try · Takes about a minute</p>
+      {onSwitchToLogin && (
+        <button
+          type="button"
+          onClick={onSwitchToLogin}
+          className="mt-3 w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          Already have an account? <span className="text-primary font-medium">Sign in</span>
+        </button>
+      )}
     </div>
   );
 }
@@ -149,7 +159,7 @@ function StepProfile({
             value={data.name}
             onChange={(e) => setData((d) => ({ ...d, name: e.target.value }))}
             placeholder="Alex Chen"
-            className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-border bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40"
+            className="w-full px-3.5 py-2.5 text-base sm:text-sm rounded-lg border border-border bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40 min-h-[44px] sm:min-h-0"
           />
         </Field>
         <Field label="Email" error={errors.email}>
@@ -158,7 +168,7 @@ function StepProfile({
             value={data.email}
             onChange={(e) => setData((d) => ({ ...d, email: e.target.value }))}
             placeholder="alex@playlog.app"
-            className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-border bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40"
+            className="w-full px-3.5 py-2.5 text-base sm:text-sm rounded-lg border border-border bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40 min-h-[44px] sm:min-h-0"
           />
         </Field>
       </div>
@@ -314,14 +324,14 @@ function BrandPanel({ data }: { data: StepData }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export function Onboarding({ onComplete }: OnboardingProps) {
+export function Onboarding({ onComplete, onSwitchToLogin }: OnboardingProps) {
   const [step, setStep] = useState(0);
   const [data, setData] = useState<StepData>({ name: "", email: "", sport: "tennis", level: null });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | undefined>();
 
-  const createUser = useMutation(api.users.createUser);
+  const signup = useMutation(api.auth.signup);
 
   // ── Steps: 0=Welcome, 1=Profile, 2=Sport, 3=Level ──
   const TOTAL_STEPS = 3; // non-welcome steps
@@ -349,12 +359,19 @@ export function Onboarding({ onComplete }: OnboardingProps) {
       setSubmitError(undefined);
       setSubmitting(true);
       try {
-        const userId = await createUser({
+        const { token, user } = await signup({
           name: data.name.trim(),
           email: data.email.trim(),
           sports: ["tennis"],
         });
-        onComplete({ userId, name: data.name.trim(), email: data.email.trim(), sport: "tennis", level: data.level ?? undefined });
+        setAuthToken(token);
+        onComplete({
+          userId: user._id,
+          name: data.name.trim(),
+          email: data.email.trim(),
+          sport: "tennis",
+          level: data.level ?? undefined,
+        });
       } catch (err) {
         setSubmitError(err instanceof Error ? err.message : "Failed to create account. Please try again.");
         setSubmitting(false);
@@ -367,10 +384,10 @@ export function Onboarding({ onComplete }: OnboardingProps) {
   const back = () => setStep((s) => Math.max(s - 1, 0));
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col overflow-x-hidden">
       {/* Top nav */}
-      <div className="px-8 py-4 border-b border-border flex items-center justify-between flex-shrink-0">
-        <img src="/logo.png" alt="PlayLog" className="h-10 w-auto" />
+      <div className="px-4 sm:px-8 py-4 border-b border-border flex items-center justify-between flex-shrink-0">
+        <img src="/logo.png" alt="PlayLog" className="h-9 sm:h-10 w-auto" />
         {step > 0 && (
           <div className="flex items-center gap-2">
             {Array.from({ length: TOTAL_STEPS }, (_, i) => (
@@ -392,9 +409,9 @@ export function Onboarding({ onComplete }: OnboardingProps) {
       {/* Body */}
       <div className="flex flex-1 min-h-0">
         {/* Left — step content */}
-        <div className="flex-1 flex items-center justify-center px-6 py-10">
+        <div className="flex-1 flex items-center justify-center px-4 sm:px-6 py-6 sm:py-10">
           <div className="w-full max-w-md">
-            {step === 0 && <StepWelcome onNext={next} />}
+            {step === 0 && <StepWelcome onNext={next} onSwitchToLogin={onSwitchToLogin} />}
             {step === 1 && (
               <StepProfile data={data} setData={setData} errors={errors} onNext={next} onBack={back} />
             )}

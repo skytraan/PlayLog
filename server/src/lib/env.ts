@@ -24,4 +24,6 @@ export const env = {
 
   twelvelabsApiKey: optional("TWELVELABS_API_KEY"),
   anthropicApiKey: optional("ANTHROPIC_API_KEY"),
+
+  jwtSecret: required("JWT_SECRET"),
 };

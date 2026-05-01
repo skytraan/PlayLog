@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { sql } from "../db/client.js";
 import { mapFeedback } from "../db/mappers.js";
-import { ApiError, rpc } from "../lib/route.js";
+import { ApiError, authedRpc } from "../lib/route.js";
 
 export const feedback = new Hono();
 
@@ -17,7 +17,7 @@ const SaveArgs = z.object({
 
 feedback.post(
   "/saveFeedback",
-  rpc(SaveArgs, async (a) => {
+  authedRpc(SaveArgs, async (a) => {
     const sess = await sql`SELECT 1 FROM sessions WHERE id = ${a.sessionId}`;
     if (sess.length === 0) {
       throw new ApiError(`Session ${a.sessionId} not found`, 404);
@@ -44,7 +44,7 @@ const ByIdArgs = z.object({ feedbackId: z.string() });
 
 feedback.post(
   "/getFeedback",
-  rpc(ByIdArgs, async ({ feedbackId }) => {
+  authedRpc(ByIdArgs, async ({ feedbackId }) => {
     const rows = await sql`SELECT * FROM feedback WHERE id = ${feedbackId}`;
     if (rows.length === 0) {
       throw new ApiError(`Feedback ${feedbackId} not found`, 404);
@@ -57,7 +57,7 @@ const BySessionArgs = z.object({ sessionId: z.string() });
 
 feedback.post(
   "/getLatestFeedback",
-  rpc(BySessionArgs, async ({ sessionId }) => {
+  authedRpc(BySessionArgs, async ({ sessionId }) => {
     const rows = await sql`
       SELECT * FROM feedback
       WHERE session_id = ${sessionId}

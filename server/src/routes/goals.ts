@@ -2,15 +2,13 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { sql } from "../db/client.js";
 import { mapGoal } from "../db/mappers.js";
-import { ApiError, rpc } from "../lib/route.js";
+import { ApiError, authedRpc } from "../lib/route.js";
 
 export const goals = new Hono();
 
-const UserIdArgs = z.object({ userId: z.string() });
-
 goals.post(
   "/getGoal",
-  rpc(UserIdArgs, async ({ userId }) => {
+  authedRpc(z.object({}), async (_args, { userId }) => {
     const rows = await sql`
       SELECT * FROM goals WHERE user_id = ${userId} LIMIT 1
     `;
@@ -19,7 +17,6 @@ goals.post(
 );
 
 const SetArgs = z.object({
-  userId: z.string(),
   targetOvr: z.number(),
   deadline: z.string(),
 });
@@ -27,7 +24,7 @@ const SetArgs = z.object({
 // Upsert by user — keeps Convex's "one goal per user" semantics.
 goals.post(
   "/setGoal",
-  rpc(SetArgs, async ({ userId, targetOvr, deadline }) => {
+  authedRpc(SetArgs, async ({ targetOvr, deadline }, { userId }) => {
     if (targetOvr < 1 || targetOvr > 100) {
       throw new ApiError("targetOvr must be between 1 and 100");
     }

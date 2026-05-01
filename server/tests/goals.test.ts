@@ -4,13 +4,14 @@ vi.mock("../src/db/client.js", () => import("./helpers/sql-mock.js"));
 
 import { queueRows, resetSqlMock } from "./helpers/sql-mock.js";
 import { goals } from "../src/routes/goals.js";
+import { authHeaders } from "./helpers/auth.js";
 
 beforeEach(() => resetSqlMock());
 
 async function post(path: string, body: unknown) {
   return goals.request(path, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders(),
     body: JSON.stringify(body),
   });
 }
@@ -19,10 +20,19 @@ describe("getGoal", () => {
   test("returns null when user has no goal", async () => {
     queueRows([]);
 
-    const res = await post("/getGoal", { userId: "user-1" });
+    const res = await post("/getGoal", {});
 
     expect(res.status).toBe(200);
     expect(await res.json()).toBeNull();
+  });
+
+  test("401 when no auth header", async () => {
+    const res = await goals.request("/getGoal", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(401);
   });
 });
 
@@ -32,7 +42,6 @@ describe("setGoal", () => {
     queueRows([{ id: "goal-1" }]); // INSERT RETURNING id
 
     const res = await post("/setGoal", {
-      userId: "user-1",
       targetOvr: 80,
       deadline: "2026-12-31",
     });
@@ -46,7 +55,6 @@ describe("setGoal", () => {
     queueRows([]); // UPDATE
 
     const res = await post("/setGoal", {
-      userId: "user-1",
       targetOvr: 90,
       deadline: "2026-12-31",
     });
@@ -57,7 +65,6 @@ describe("setGoal", () => {
 
   test("validation failure — 400 when targetOvr is out of range", async () => {
     const res = await post("/setGoal", {
-      userId: "user-1",
       targetOvr: 0,
       deadline: "2026-12-31",
     });

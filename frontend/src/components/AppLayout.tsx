@@ -2,9 +2,18 @@ import { useState } from "react";
 import { Learn } from "@/components/tabs/Learn";
 import { Progress } from "@/components/tabs/Progress";
 import { UserProfile } from "@/components/Onboarding";
+import { setAuthToken } from "@/lib/api";
 
 interface AppLayoutProps {
   user: UserProfile;
+}
+
+const STORAGE_KEY = "playlog_user";
+
+function handleSignOut() {
+  setAuthToken(null);
+  try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
+  window.location.reload();
 }
 
 export default function AppLayout({ user }: AppLayoutProps) {
@@ -22,9 +31,12 @@ export default function AppLayout({ user }: AppLayoutProps) {
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card sticky top-0 z-30 backdrop-blur supports-[backdrop-filter]:bg-card/80">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="flex h-16 items-center justify-between">
-            <div className="flex items-center gap-7">
-              <img src="/logo.png" alt="PlayLog" className="h-11 w-auto" />
+          <div className="flex h-16 items-center justify-between gap-2">
+            <div className="flex items-center gap-3 sm:gap-7 min-w-0">
+              <img src="/logo.png" alt="PlayLog" className="h-9 sm:h-11 w-auto flex-shrink-0" />
+              {/* Tap targets bumped to 44px tall on mobile per Apple HIG /
+                  WCAG. Labels stay visible at 375px because the streak chip
+                  and the user name both hide on small screens. */}
               <nav className="flex items-center gap-1 bg-secondary/60 rounded-lg p-1">
                 {[
                   { id: "learn", label: "Learn", icon: "📹" },
@@ -33,7 +45,7 @@ export default function AppLayout({ user }: AppLayoutProps) {
                   <button
                     key={t.id}
                     onClick={() => setActiveTab(t.id as "learn" | "progress")}
-                    className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all flex items-center gap-1.5 ${
+                    className={`px-3 py-2 sm:py-1.5 text-sm font-medium rounded-md transition-all flex items-center gap-1.5 min-h-[40px] sm:min-h-0 ${
                       activeTab === t.id
                         ? "bg-card text-foreground shadow-sm"
                         : "text-muted-foreground hover:text-foreground"
@@ -76,10 +88,14 @@ export default function AppLayout({ user }: AppLayoutProps) {
                         <div className="text-[11px] text-muted-foreground">{user.email}</div>
                       </div>
                       <div className="py-1">
-                        {["My profile", "Settings", "Sign out"].map((item) => (
+                        {(["My profile", "Settings", "Sign out"] as const).map((item) => (
                           <button
                             key={item}
-                            className="w-full text-left px-3 py-1.5 text-sm text-foreground hover:bg-secondary transition-colors"
+                            onClick={() => {
+                              setProfileMenuOpen(false);
+                              if (item === "Sign out") handleSignOut();
+                            }}
+                            className="w-full text-left px-3 py-2 text-sm text-foreground hover:bg-secondary transition-colors min-h-[40px]"
                           >
                             {item}
                           </button>

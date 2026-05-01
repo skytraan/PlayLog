@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { sql } from "../db/client.js";
 import { mapMessage } from "../db/mappers.js";
-import { rpc } from "../lib/route.js";
+import { authedRpc } from "../lib/route.js";
 
 export const messages = new Hono();
 
@@ -14,7 +14,7 @@ const SaveArgs = z.object({
 
 messages.post(
   "/saveMessage",
-  rpc(SaveArgs, async ({ sessionId, role, content }) => {
+  authedRpc(SaveArgs, async ({ sessionId, role, content }) => {
     const [row] = await sql`
       INSERT INTO messages (session_id, role, content, created_at)
       VALUES (${sessionId}, ${role}, ${content}, ${Date.now()})
@@ -28,7 +28,7 @@ const SessionArgs = z.object({ sessionId: z.string() });
 
 messages.post(
   "/getMessages",
-  rpc(SessionArgs, async ({ sessionId }) => {
+  authedRpc(SessionArgs, async ({ sessionId }) => {
     const rows = await sql`
       SELECT * FROM messages
       WHERE session_id = ${sessionId}
@@ -47,7 +47,7 @@ const RecentArgs = z.object({
 // so callers can hand the array straight to a chat history.
 messages.post(
   "/getRecentMessages",
-  rpc(RecentArgs, async ({ sessionId, limit }) => {
+  authedRpc(RecentArgs, async ({ sessionId, limit }) => {
     const rows = await sql`
       SELECT * FROM messages
       WHERE session_id = ${sessionId}

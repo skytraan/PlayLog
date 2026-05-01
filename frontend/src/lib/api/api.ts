@@ -17,21 +17,24 @@ import {
   type UserDoc,
 } from "./types";
 
+export interface AuthResponse {
+  token: string;
+  user: UserDoc;
+}
+
 export const api = {
-  users: {
-    createUser: defMutation<
+  auth: {
+    login: defMutation<{ email: string }, AuthResponse>("auth", "login"),
+    signup: defMutation<
       { name: string; email: string; sports: string[] },
-      Id<"users">
-    >("users", "createUser"),
-    getUser: defQuery<{ userId: Id<"users"> }, UserDoc>("users", "getUser"),
-    findUser: defQuery<{ userId: Id<"users"> }, UserDoc | null>("users", "findUser"),
-    getUserByEmail: defQuery<{ email: string }, UserDoc | null>("users", "getUserByEmail"),
+      AuthResponse
+    >("auth", "signup"),
+    me: defQuery<Record<string, never>, UserDoc>("auth", "me"),
   },
 
   sessions: {
     createSession: defMutation<
       {
-        userId: Id<"users">;
         sport: string;
         videoStorageId: Id<"_storage">;
         requestedSections: string[];
@@ -47,9 +50,9 @@ export const api = {
       null
     >("sessions", "updateSessionStatus"),
     getSession: defQuery<{ sessionId: Id<"sessions"> }, SessionDoc>("sessions", "getSession"),
-    listSessions: defQuery<{ userId: Id<"users"> }, SessionDoc[]>("sessions", "listSessions"),
+    listSessions: defQuery<Record<string, never>, SessionDoc[]>("sessions", "listSessions"),
     listSessionsWithFeedback: defQuery<
-      { userId: Id<"users"> },
+      Record<string, never>,
       SessionWithFeedback[]
     >("sessions", "listSessionsWithFeedback"),
     deleteSession: defMutation<{ sessionId: Id<"sessions"> }, null>(
@@ -120,19 +123,19 @@ export const api = {
   },
 
   goals: {
-    getGoal: defQuery<{ userId: Id<"users"> }, GoalDoc | null>("goals", "getGoal"),
+    getGoal: defQuery<Record<string, never>, GoalDoc | null>("goals", "getGoal"),
     setGoal: defMutation<
-      { userId: Id<"users">; targetOvr: number; deadline: string },
+      { targetOvr: number; deadline: string },
       Id<"goals">
     >("goals", "setGoal"),
   },
 
   badges: {
-    getUserBadges: defQuery<{ userId: Id<"users"> }, BadgeDoc[]>(
+    getUserBadges: defQuery<Record<string, never>, BadgeDoc[]>(
       "badges",
       "getUserBadges"
     ),
-    checkAndAwardBadges: defMutation<{ userId: Id<"users"> }, string[]>(
+    checkAndAwardBadges: defMutation<Record<string, never>, string[]>(
       "badges",
       "checkAndAwardBadges"
     ),

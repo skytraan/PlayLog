@@ -24,7 +24,7 @@ interface ProgressProps {
 
 
 export function Progress({ userId, userName, initialLevel }: ProgressProps) {
-  const rawSessions = useQuery(api.sessions.listSessionsWithFeedback, { userId });
+  const rawSessions = useQuery(api.sessions.listSessionsWithFeedback, {});
 
   if (rawSessions === undefined) return <ProgressSkeleton />;
 
@@ -34,10 +34,10 @@ export function Progress({ userId, userName, initialLevel }: ProgressProps) {
   if (totalSessions === 0) {
     const ovr = initialLevel ? (INITIAL_OVR[initialLevel] ?? 0) : 0;
     const placeholderRatings = { serve: ovr || null, forehand: ovr || null, backhand: ovr || null, volley: ovr || null, footwork: ovr || null };
-    return <ProgressPlaceholder userId={userId} userName={userName} ovr={ovr} ratings={placeholderRatings} />;
+    return <ProgressPlaceholder userName={userName} ovr={ovr} ratings={placeholderRatings} />;
   }
 
-  const earnedBadges = (useQuery(api.badges.getUserBadges, { userId }) ?? []).map((b) => ({
+  const earnedBadges = (useQuery(api.badges.getUserBadges, {}) ?? []).map((b) => ({
     id: b.badgeId,
     name: b.badgeId,
     description: "",
@@ -133,7 +133,6 @@ export function Progress({ userId, userName, initialLevel }: ProgressProps) {
         </div>
         <div className="flex-1">
           <OvrGoal
-            userId={userId}
             currentOvr={card.overallRating}
             totalSessions={totalSessions}
             streak={0}
@@ -175,12 +174,10 @@ function ProgressSkeleton() {
 }
 
 function ProgressPlaceholder({
-  userId,
   userName,
   ovr,
   ratings,
 }: {
-  userId: Id<"users">;
   userName: string;
   ovr: number;
   ratings: { serve: number | null; forehand: number | null; backhand: number | null; volley: number | null; footwork: number | null };
@@ -196,7 +193,6 @@ function ProgressPlaceholder({
         </div>
         <div className="flex-1">
           <OvrGoal
-            userId={userId}
             currentOvr={ovr}
             totalSessions={0}
             streak={0}

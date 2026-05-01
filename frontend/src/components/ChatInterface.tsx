@@ -48,7 +48,11 @@ export function ChatInterface({
   return (
     <div
       className="bg-card border border-border rounded-2xl flex flex-col"
-      style={{ height: "calc(100vh - 11rem)", maxHeight: 720, minHeight: 400 }}
+      // `100dvh` is the dynamic viewport unit — it shrinks/grows with the iOS
+      // Safari URL bar and the on-screen keyboard, so the input stays anchored
+      // above the keyboard instead of being pushed off-screen. Older browsers
+      // fall back to the previous `100vh` value via the second style entry.
+      style={{ height: "calc(100dvh - 11rem)", maxHeight: 720, minHeight: 400 }}
     >
       {/* Header */}
       <div className="px-4 py-3 border-b border-border flex items-center gap-3 flex-shrink-0">
@@ -147,18 +151,25 @@ export function ChatInterface({
       <div className="px-4 py-3 border-t border-border flex-shrink-0">
         {sendError && <p className="text-xs text-destructive mb-2">{sendError}</p>}
         <form onSubmit={handleSubmit} className="flex items-center gap-2">
+          {/*
+            iOS Safari auto-zooms inputs whose computed font-size is < 16px.
+            We force 16px on mobile (sm:text-sm preserves the desktop look) so
+            tapping the field keeps the layout stable instead of jumping into a
+            zoomed view.
+          */}
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={disabled ? "Upload a video to start chatting…" : "Ask about your technique…"}
             disabled={disabled}
-            className="flex-1 px-3 py-2 text-sm rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-50 disabled:cursor-not-allowed"
+            enterKeyHint="send"
+            className="flex-1 px-3 py-2.5 text-base sm:text-sm rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
           />
           <button
             type="submit"
             disabled={disabled || !input.trim()}
-            className="px-3 py-2 text-sm font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-30"
+            className="px-4 py-2.5 text-sm font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-30 min-h-[44px] min-w-[64px]"
           >
             Send
           </button>

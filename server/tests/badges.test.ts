@@ -4,13 +4,14 @@ vi.mock("../src/db/client.js", () => import("./helpers/sql-mock.js"));
 
 import { queueRows, resetSqlMock } from "./helpers/sql-mock.js";
 import { badges } from "../src/routes/badges.js";
+import { authHeaders } from "./helpers/auth.js";
 
 beforeEach(() => resetSqlMock());
 
 async function post(path: string, body: unknown) {
   return badges.request(path, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders(),
     body: JSON.stringify(body),
   });
 }
@@ -19,16 +20,19 @@ describe("getUserBadges", () => {
   test("happy path — returns empty array when user has no badges", async () => {
     queueRows([]);
 
-    const res = await post("/getUserBadges", { userId: "user-1" });
+    const res = await post("/getUserBadges", {});
 
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual([]);
   });
 
-  test("validation failure — 400 on missing userId", async () => {
-    const res = await post("/getUserBadges", {});
-
-    expect(res.status).toBe(400);
+  test("401 when no auth header", async () => {
+    const res = await badges.request("/getUserBadges", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(401);
   });
 });
 
@@ -37,7 +41,7 @@ describe("checkAndAwardBadges", () => {
     queueRows([]); // sessions + analyses join
     queueRows([]); // existing badges
 
-    const res = await post("/checkAndAwardBadges", { userId: "user-1" });
+    const res = await post("/checkAndAwardBadges", {});
 
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual([]);
@@ -50,7 +54,7 @@ describe("checkAndAwardBadges", () => {
     queueRows([]); // existing badges
     queueRows([]); // INSERT badge
 
-    const res = await post("/checkAndAwardBadges", { userId: "user-1" });
+    const res = await post("/checkAndAwardBadges", {});
 
     expect(res.status).toBe(200);
     const awarded = await res.json() as string[];
@@ -63,7 +67,7 @@ describe("checkAndAwardBadges", () => {
     ]); // sessions + analyses join
     queueRows([{ badge_id: "ace-machine" }]); // already earned
 
-    const res = await post("/checkAndAwardBadges", { userId: "user-1" });
+    const res = await post("/checkAndAwardBadges", {});
 
     expect(res.status).toBe(200);
     const awarded = await res.json() as string[];

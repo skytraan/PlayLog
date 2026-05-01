@@ -3,7 +3,7 @@ import { z } from "zod";
 import Anthropic from "@anthropic-ai/sdk";
 import { sql } from "../db/client.js";
 import { mapAnalysis, mapFeedback, mapMessage, mapSession } from "../db/mappers.js";
-import { ApiError, rpc } from "../lib/route.js";
+import { ApiError, authedRpc } from "../lib/route.js";
 import { env } from "../lib/env.js";
 import {
   buildTimeline,
@@ -72,7 +72,16 @@ const FeedbackSchema = z.object({
 
 coach.post(
   "/generateFeedback",
-  rpc(FeedbackArgs, async ({ sessionId, analysisId }) => {
+  authedRpc(FeedbackArgs, async ({ sessionId, analysisId }) => {
+    // Idempotency: if feedback already exists for this analysis, return it
+    // without re-spending Anthropic tokens. The DB-side UNIQUE constraint on
+    // feedback.analysis_id is the authoritative guard against races; this
+    // check is just the cheap path for the 99% case.
+    const existing = await sql`
+      SELECT id FROM feedback WHERE analysis_id = ${analysisId} LIMIT 1
+    `;
+    if (existing.length > 0) return existing[0]!.id as string;
+
     const [sessRows, anaRows] = await Promise.all([
       sql`SELECT * FROM sessions WHERE id = ${sessionId}`,
       sql`SELECT * FROM analyses WHERE id = ${analysisId}`,
@@ -155,6 +164,10 @@ Hard rule: every timestamp you use MUST come from the timeline above, written in
     const improvements = parsed.improvements.map(snap);
     const drills = parsed.drills.map(snap);
 
+    // ON CONFLICT (analysis_id): if a concurrent request already inserted
+    // feedback between our short-circuit check above and this INSERT, return
+    // the existing row's id rather than failing. The no-op SET on the
+    // conflict key forces RETURNING to emit the existing row.
     const [row] = await sql`
       INSERT INTO feedback (
         session_id, analysis_id, summary, strengths, improvements, drills, created_at
@@ -165,6 +178,8 @@ Hard rule: every timestamp you use MUST come from the timeline above, written in
         ${sql.array(drills)},
         ${Date.now()}
       )
+      ON CONFLICT (analysis_id) DO UPDATE
+        SET analysis_id = EXCLUDED.analysis_id
       RETURNING id
     `;
     return row!.id as string;
@@ -185,7 +200,7 @@ const AskArgs = z.object({
 
 coach.post(
   "/askCoach",
-  rpc(AskArgs, async ({ sessionId, userMessage }) => {
+  authedRpc(AskArgs, async ({ sessionId, userMessage }) => {
     if (!userMessage.trim()) throw new ApiError("message cannot be empty");
 
     const [sessRows, historyRows, latestFbRows, latestAnaRows] = await Promise.all([

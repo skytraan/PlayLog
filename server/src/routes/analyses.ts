@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { sql } from "../db/client.js";
 import { mapAnalysis } from "../db/mappers.js";
-import { ApiError, rpc } from "../lib/route.js";
+import { ApiError, authedRpc } from "../lib/route.js";
 
 export const analyses = new Hono();
 
@@ -10,7 +10,7 @@ const CreateArgs = z.object({ sessionId: z.string() });
 
 analyses.post(
   "/createAnalysis",
-  rpc(CreateArgs, async ({ sessionId }) => {
+  authedRpc(CreateArgs, async ({ sessionId }) => {
     const sess = await sql`SELECT 1 FROM sessions WHERE id = ${sessionId}`;
     if (sess.length === 0) {
       throw new ApiError(`Session ${sessionId} not found`, 404);
@@ -38,7 +38,7 @@ const UpdateArgs = z.object({
 // ctx.db.patch with `Object.entries(...).filter(...)`. Empty patches are no-ops.
 analyses.post(
   "/updateAnalysis",
-  rpc(UpdateArgs, async (args) => {
+  authedRpc(UpdateArgs, async (args) => {
     const exists = await sql`
       SELECT 1 FROM analyses WHERE id = ${args.analysisId}
     `;
@@ -69,7 +69,7 @@ const ByIdArgs = z.object({ analysisId: z.string() });
 
 analyses.post(
   "/getAnalysis",
-  rpc(ByIdArgs, async ({ analysisId }) => {
+  authedRpc(ByIdArgs, async ({ analysisId }) => {
     const rows = await sql`SELECT * FROM analyses WHERE id = ${analysisId}`;
     if (rows.length === 0) {
       throw new ApiError(`Analysis ${analysisId} not found`, 404);
@@ -82,7 +82,7 @@ const BySessionArgs = z.object({ sessionId: z.string() });
 
 analyses.post(
   "/getLatestAnalysis",
-  rpc(BySessionArgs, async ({ sessionId }) => {
+  authedRpc(BySessionArgs, async ({ sessionId }) => {
     const rows = await sql`
       SELECT * FROM analyses
       WHERE session_id = ${sessionId}

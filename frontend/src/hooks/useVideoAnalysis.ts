@@ -123,7 +123,6 @@ export function useVideoAnalysis({
         }
 
         const newSessionId = await createSession({
-          userId,
           sport,
           videoStorageId: storageId,
           requestedSections,
@@ -193,7 +192,7 @@ Identify strengths, weaknesses, and specific drills to improve each area.`;
         setFeedbackId(newFeedbackId);
 
         // ── Step 5: Check and award badges ────────────────────────────────────
-        await checkAndAwardBadges({ userId });
+        await checkAndAwardBadges({});
 
         setStatus("ready");
       } catch (err) {

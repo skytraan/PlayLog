@@ -26,10 +26,19 @@ export function UploadArea({ status, onUpload }: UploadAreaProps) {
       <div className="border border-dashed border-border rounded-lg bg-card">
         {status === "idle" ? (
           <>
+            {/*
+              `accept="video/*"` (instead of a comma-separated mp4/mov/avi list)
+              + `capture="environment"` makes iOS Safari and Android Chrome offer
+              "Take Video" alongside "Photo Library" directly from the system
+              picker — no extra "choose camera" step on the page itself. Desktop
+              browsers ignore `capture` and continue to behave like a normal
+              file dialog.
+            */}
             <input
               ref={fileInputRef}
               type="file"
-              accept="video/mp4,video/quicktime,video/x-msvideo"
+              accept="video/*"
+              capture="environment"
               className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0];
@@ -39,11 +48,11 @@ export function UploadArea({ status, onUpload }: UploadAreaProps) {
             />
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="w-full px-4 py-8 flex flex-col items-center gap-2 hover:bg-secondary/50 transition-colors rounded-lg"
+              className="w-full px-4 py-8 sm:py-8 flex flex-col items-center gap-2 hover:bg-secondary/50 transition-colors rounded-lg min-h-[120px]"
             >
-              <Upload className="h-5 w-5 text-muted-foreground" />
-              <span className="text-sm font-medium text-foreground">Upload session footage</span>
-              <span className="text-xs text-muted-foreground">MP4, MOV, or AVI — drag and drop or click to browse</span>
+              <Upload className="h-6 w-6 sm:h-5 sm:w-5 text-muted-foreground" />
+              <span className="text-sm font-medium text-foreground">Tap to record or upload</span>
+              <span className="text-xs text-muted-foreground text-center px-2">MP4, MOV, or AVI — drag &amp; drop on desktop, or use your camera on mobile</span>
             </button>
           </>
         ) : (

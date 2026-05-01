@@ -23,6 +23,8 @@ export function Learn({ sport, userId }: LearnProps) {
   const { status, error, sessionId, currentVideo, analyze, reset } = useVideoAnalysis({
     userId,
     sport,
+    // userId still threaded into the hook so the local-storage key for the
+    // active-session cache stays per-user; it's no longer sent over the wire.
     requestedSections: sport === "tennis"
       ? ["forehand", "backhand", "serve", "footwork"]
       : sport === "basketball"
@@ -36,7 +38,7 @@ export function Learn({ sport, userId }: LearnProps) {
   // Track which session the user has selected in the library
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
 
-  const rawSessions = useQuery(api.sessions.listSessionsWithFeedback, { userId });
+  const rawSessions = useQuery(api.sessions.listSessionsWithFeedback, {});
 
   // Priority: newly-uploaded session > user-selected > most recent
   const effectiveSessionId: Id<"sessions"> | null =

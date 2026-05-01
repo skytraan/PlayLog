@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { sql } from "../db/client.js";
-import { ApiError, rpc } from "../lib/route.js";
+import { ApiError, authedRpc } from "../lib/route.js";
 import {
   deleteObject,
   newStorageId,
@@ -20,7 +20,7 @@ const UploadArgs = z.object({
 
 storage.post(
   "/generateUploadUrl",
-  rpc(UploadArgs, async ({ contentType }) => {
+  authedRpc(UploadArgs, async ({ contentType }) => {
     const storageId = newStorageId();
     const uploadUrl = await presignUpload(storageId, contentType ?? "video/mp4");
     return { uploadUrl, storageId };
@@ -31,7 +31,7 @@ const ByStorageIdArgs = z.object({ storageId: z.string() });
 
 storage.post(
   "/getVideoUrl",
-  rpc(ByStorageIdArgs, async ({ storageId }) => {
+  authedRpc(ByStorageIdArgs, async ({ storageId }) => {
     return presignRead(storageId);
   })
 );
@@ -40,7 +40,7 @@ const BySessionIdArgs = z.object({ sessionId: z.string() });
 
 storage.post(
   "/getSessionVideoUrl",
-  rpc(BySessionIdArgs, async ({ sessionId }) => {
+  authedRpc(BySessionIdArgs, async ({ sessionId }) => {
     const rows = await sql`
       SELECT video_storage_id FROM sessions WHERE id = ${sessionId}
     `;
@@ -53,7 +53,7 @@ storage.post(
 
 storage.post(
   "/deleteVideo",
-  rpc(ByStorageIdArgs, async ({ storageId }) => {
+  authedRpc(ByStorageIdArgs, async ({ storageId }) => {
     await deleteObject(storageId);
     return null;
   })

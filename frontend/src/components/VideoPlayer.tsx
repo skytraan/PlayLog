@@ -62,15 +62,31 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
 
     const handleEnded = () => setPlaying(false);
 
-    const seekToPosition = (e: React.MouseEvent<HTMLDivElement>) => {
+    const seekFromPoint = (clientX: number) => {
       const track = trackRef.current;
       const video = videoRef.current;
       if (!track || !video || !duration) return;
       const rect = track.getBoundingClientRect();
-      const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
       const t = pct * duration;
       video.currentTime = t;
       setCurrentTime(t);
+    };
+
+    const seekToPosition = (e: React.MouseEvent<HTMLDivElement>) =>
+      seekFromPoint(e.clientX);
+
+    // Touch support: pointermove keeps the playhead following the finger,
+    // which matches the iOS native video scrubber and avoids the "tap-only"
+    // feel of the click handler. We deliberately don't capture the pointer
+    // because cue-marker buttons need to receive their own taps.
+    const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+      if (e.pointerType !== "touch") return;
+      seekFromPoint(e.clientX);
+    };
+    const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+      if (e.pointerType !== "touch" || e.buttons === 0) return;
+      seekFromPoint(e.clientX);
     };
 
     const fmt = (s: number) => {
@@ -85,6 +101,11 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
       <div className="rounded-2xl overflow-hidden border border-border bg-black">
         <video
           ref={videoRef}
+          // `controls` is the safest path to fullscreen on iOS Safari, which
+          // has historically refused to expose `requestFullscreen` to custom
+          // chrome. Native controls coexist with our scrubber + cue markers
+          // below; users can pick either.
+          controls
           className="w-full max-h-72 object-contain bg-black"
           onTimeUpdate={handleTimeUpdate}
           onLoadedMetadata={handleLoadedMetadata}
@@ -93,11 +114,14 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
         />
 
         <div className="bg-card px-4 py-3 space-y-2">
-          {/* Custom scrubber track */}
+          {/* Custom scrubber track. Min height 44px on mobile so the hit
+              target meets WCAG / Apple HIG guidance for thumbs. */}
           <div
             ref={trackRef}
-            className="relative h-8 cursor-pointer"
+            className="relative h-11 sm:h-8 cursor-pointer touch-none select-none"
             onClick={seekToPosition}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
           >
             {/* Track background */}
             <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-1 bg-secondary rounded-full" />
@@ -132,8 +156,12 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
           {/* Controls row */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <button onClick={togglePlay} className="text-foreground hover:text-primary transition-colors">
-                {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+              <button
+                onClick={togglePlay}
+                aria-label={playing ? "Pause" : "Play"}
+                className="text-foreground hover:text-primary transition-colors p-2 -ml-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
+              >
+                {playing ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
               </button>
               <span className="text-xs text-muted-foreground font-mono">
                 {fmt(currentTime)} / {fmt(duration)}

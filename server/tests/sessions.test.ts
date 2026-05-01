@@ -5,6 +5,7 @@ vi.mock("../src/storage/r2.js", () => ({ deleteObject: vi.fn() }));
 
 import { queueRows, resetSqlMock } from "./helpers/sql-mock.js";
 import { sessions } from "../src/routes/sessions.js";
+import { authHeaders } from "./helpers/auth.js";
 
 beforeEach(() => {
   resetSqlMock();
@@ -14,7 +15,7 @@ beforeEach(() => {
 async function post(path: string, body: unknown) {
   return sessions.request(path, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders(),
     body: JSON.stringify(body),
   });
 }
@@ -25,7 +26,6 @@ describe("createSession", () => {
     queueRows([{ id: "sess-1" }]); // INSERT RETURNING id
 
     const res = await post("/createSession", {
-      userId: "user-1",
       sport: "tennis",
       videoStorageId: "videos/test.mp4",
       requestedSections: ["serve"],
@@ -39,7 +39,6 @@ describe("createSession", () => {
     queueRows([{ "1": 1 }]); // user exists check
 
     const res = await post("/createSession", {
-      userId: "user-1",
       sport: "   ",
       videoStorageId: "videos/test.mp4",
       requestedSections: ["serve"],
@@ -54,7 +53,6 @@ describe("createSession", () => {
     queueRows([{ "1": 1 }]); // user exists check
 
     const res = await post("/createSession", {
-      userId: "user-1",
       sport: "tennis",
       videoStorageId: "videos/test.mp4",
       requestedSections: [],

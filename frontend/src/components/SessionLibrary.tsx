@@ -89,13 +89,14 @@ export function SessionLibrary({
               <div key={session.id}>
                 {/* Session row */}
                 <div
-                  className={`px-5 py-3 flex items-center gap-4 transition-colors cursor-pointer ${
+                  className={`px-4 sm:px-5 py-3 flex items-center gap-3 sm:gap-4 transition-colors cursor-pointer min-h-[64px] ${
                     isActive ? "bg-secondary/50" : "hover:bg-secondary/30"
                   }`}
                   onClick={() => onActivate?.(session.id)}
                 >
-                  {/* Thumbnail */}
-                  <div className="w-20 h-12 rounded-md overflow-hidden flex-shrink-0 border border-border relative">
+                  {/* Thumbnail — hide on the smallest screens to keep the row
+                      from wrapping to two lines on a 320px-wide layout. */}
+                  <div className="hidden xs:block w-16 sm:w-20 h-10 sm:h-12 rounded-md overflow-hidden flex-shrink-0 border border-border relative">
                     <CourtThumbnail index={globalIndex} />
                     {isActive && (
                       <div className="absolute inset-0 bg-primary/30 flex items-center justify-center">
@@ -107,15 +108,15 @@ export function SessionLibrary({
                   {/* Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-medium text-foreground">
+                      <span className="text-sm font-medium text-foreground truncate">
                         {new Date(session.date).toLocaleDateString("en-US", {
-                          weekday: "long",
                           month: "short",
                           day: "numeric",
+                          year: "2-digit",
                         })}
                       </span>
                       {session.challengeResult === true && (
-                        <span className="text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                        <span className="text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded whitespace-nowrap">
                           Challenge ✓
                         </span>
                       )}
@@ -123,14 +124,14 @@ export function SessionLibrary({
                     {session.pegasusSummary && (
                       <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{session.pegasusSummary}</p>
                     )}
-                    <div className="flex items-center gap-2 mt-1 text-[11px] font-mono text-muted-foreground">
+                    <div className="flex items-center gap-2 mt-1 text-[11px] font-mono text-muted-foreground flex-wrap">
                       {session.durationMinutes > 0 && <span>{session.durationMinutes}m</span>}
                       <span>{session.sport}</span>
                     </div>
                   </div>
 
                   {/* OVR + Details */}
-                  <div className="flex items-center gap-3 flex-shrink-0">
+                  <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
                     {session.overallRating > 0 && (
                       <div className="text-right">
                         <div
@@ -147,7 +148,8 @@ export function SessionLibrary({
                         e.stopPropagation();
                         toggleDetails(session.id);
                       }}
-                      className="text-[11px] px-2.5 py-1.5 rounded-md bg-secondary hover:bg-accent transition-colors text-foreground whitespace-nowrap"
+                      aria-label={isOpen ? "Close session details" : "Open session details"}
+                      className="text-[11px] px-2.5 py-2 rounded-md bg-secondary hover:bg-accent transition-colors text-foreground whitespace-nowrap min-h-[44px] min-w-[44px] flex items-center justify-center"
                     >
                       {isOpen ? "Close ↑" : "Details →"}
                     </button>
