@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { api, useAction, useQuery, type Id } from "@/lib/api";
 import { Sport, ChatMessage, Session } from "@/types/playlog";
 import { SessionLibrary } from "@/components/SessionLibrary";
@@ -24,6 +24,12 @@ export function Learn({ sport, userId }: LearnProps) {
       : ["driving", "iron play", "short game", "putting"],
   });
 
+  // When the user clicks "Upload a different video", reset() clears sessionId
+  // and currentVideo — but effectiveSessionId would otherwise fall back to the
+  // latest history session, snapping the player right back to the previous
+  // video. This flag forces the upload area open until the next upload.
+  const [forceUpload, setForceUpload] = useState(false);
+
   const rawSessions = useQuery(api.sessions.listSessionsWithFeedback, { userId });
 
   const effectiveSessionId: Id<"sessions"> | null =
@@ -31,11 +37,24 @@ export function Learn({ sport, userId }: LearnProps) {
 
   // Rehydrate the video from R2 when we don't have the original File in
   // memory — covers tab switches and full reloads. The local File takes
-  // precedence (cheaper, no presign round-trip) when it's present.
+  // precedence (cheaper, no presign round-trip) when it's present. Skip the
+  // query entirely when the user is asking to swap videos.
   const persistedVideoUrl = useQuery(
     api.storage.getSessionVideoUrl,
-    !currentVideo && effectiveSessionId ? { sessionId: effectiveSessionId } : "skip"
+    !forceUpload && !currentVideo && effectiveSessionId
+      ? { sessionId: effectiveSessionId }
+      : "skip"
   );
+
+  const handleSwitchVideo = () => {
+    setForceUpload(true);
+    reset();
+  };
+
+  const handleUpload = async (file: File) => {
+    setForceUpload(false);
+    await analyze(file);
+  };
 
   // Extract MediaPipe cue timestamps (in seconds) from the most-recent analysis
   const latestPoseAnalysis = rawSessions?.find((s) => s.session._id === effectiveSessionId)?.poseAnalysis ?? null;
@@ -110,7 +129,7 @@ export function Learn({ sport, userId }: LearnProps) {
   // Either we have the freshly-uploaded File, or we have a persisted session
   // whose video lives in R2 — show the player in either case so the user can
   // keep referencing it across navigation and reloads.
-  const hasPlayableVideo = !!currentVideo || !!persistedVideoUrl;
+  const hasPlayableVideo = !forceUpload && (!!currentVideo || !!persistedVideoUrl);
   const showSwitchButton =
     hasPlayableVideo && (isDone || isError || (!currentVideo && !!persistedVideoUrl));
 
@@ -127,7 +146,7 @@ export function Learn({ sport, userId }: LearnProps) {
           />
           {showSwitchButton && (
             <button
-              onClick={reset}
+              onClick={handleSwitchVideo}
               className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
             >
               Upload a different video
@@ -135,7 +154,7 @@ export function Learn({ sport, userId }: LearnProps) {
           )}
         </div>
       ) : (
-        <UploadArea status={status} onUpload={analyze} />
+        <UploadArea status={status} onUpload={handleUpload} />
       )}
 
       {/* Processing status overlay when video is selected but not yet ready */}
