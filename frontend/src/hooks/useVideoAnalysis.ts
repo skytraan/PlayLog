@@ -151,19 +151,12 @@ Identify strengths, weaknesses, and specific drills to improve each area.`;
 
         if (abortRef.current) return;
 
-        // ── Step 5: Gemini coaching feedback ──────────────────────────────────
+        // ── Step 5: MediaPipe pose scoring ────────────────────────────────────
+        // Runs BEFORE coach feedback so the server can build an authoritative
+        // timeline (pose key-frames + Pegasus anchors) and ground Claude's
+        // timestamps against it.
         setStatus("scoring");
 
-        const newFeedbackId = await generateFeedback({
-          sessionId: newSessionId,
-          analysisId: newAnalysisId,
-        });
-
-        setFeedbackId(newFeedbackId);
-
-        if (abortRef.current) return;
-
-        // ── Step 6: MediaPipe pose scoring (after Gemini) ─────────────────────
         disposePoseLandmarker();
         const videoEl = document.createElement("video");
         videoEl.src = URL.createObjectURL(videoFile);
@@ -189,6 +182,16 @@ Identify strengths, weaknesses, and specific drills to improve each area.`;
             technique: poseResults.map((r) => r.technique).join(","),
           });
         }
+
+        if (abortRef.current) return;
+
+        // ── Step 6: Coach feedback (now grounded by pose timeline) ────────────
+        const newFeedbackId = await generateFeedback({
+          sessionId: newSessionId,
+          analysisId: newAnalysisId,
+        });
+
+        setFeedbackId(newFeedbackId);
 
         // ── Step 7: Check and award badges ────────────────────────────────────
         await checkAndAwardBadges({ userId });
