@@ -1,5 +1,6 @@
 # PlayLog
 
+> Presented at TwelveLabs' Multimodal Weekly and DiamondHacks 2026
 > **AI-powered sports coaching for the browser.** Upload a clip of yourself playing — PlayLog scores your form frame by frame, builds an authoritative timeline of every key moment, and an LLM coach gives you grounded, growth-oriented feedback you can click through to the exact second on the video.
 
 PlayLog combines in-browser computer vision (MediaPipe pose detection) with a video-understanding model (TwelveLabs Pegasus) and a coaching LLM (Anthropic Claude) — joined together by a small Hono server, Postgres for state, and Cloudflare R2 for video bytes.
