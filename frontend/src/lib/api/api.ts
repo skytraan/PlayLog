@@ -158,30 +158,6 @@ export const api = {
   },
 
   twelvelabs: {
-    getOrCreateIndex: defAction<{ sport: string }, string>(
-      "twelvelabs",
-      "getOrCreateIndex"
-    ),
-    indexVideo: defAction<
-      {
-        sessionId: Id<"sessions">;
-        analysisId: Id<"analyses">;
-        indexId: string;
-      },
-      string
-    >("twelvelabs", "indexVideo"),
-    getTaskStatus: defAction<
-      {
-        taskId: string;
-        analysisId: Id<"analyses">;
-        sessionId: Id<"sessions">;
-      },
-      { status: string; videoId: string | null }
-    >("twelvelabs", "getTaskStatus"),
-    analyzeVideo: defAction<
-      { analysisId: Id<"analyses">; videoId: string; prompt: string },
-      string
-    >("twelvelabs", "analyzeVideo"),
     analyzeDirect: defAction<
       {
         sessionId: Id<"sessions">;
