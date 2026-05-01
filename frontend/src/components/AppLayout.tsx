@@ -98,7 +98,7 @@ export default function AppLayout({ user }: AppLayoutProps) {
         {activeTab === "learn" ? (
           <Learn sport={user.sport} userId={user.userId} />
         ) : (
-          <Progress userId={user.userId} userName={user.name} />
+          <Progress userId={user.userId} userName={user.name} initialLevel={user.level} />
         )}
       </main>
     </div>
