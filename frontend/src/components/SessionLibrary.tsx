@@ -12,6 +12,7 @@ interface SessionLibraryProps {
 export function SessionLibrary({ sessions, onSeek, onDelete }: SessionLibraryProps) {
   const [openIds, setOpenIds] = useState<Set<string>>(new Set());
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   if (sessions.length === 0) {
     return (
@@ -172,21 +173,40 @@ export function SessionLibrary({ sessions, onSeek, onDelete }: SessionLibraryPro
 
                   {onDelete && (
                     <div className="pt-2 border-t border-border">
-                      <button
-                        disabled={deletingId === session.id}
-                        onClick={async () => {
-                          if (!window.confirm("Delete this session? The video file will also be removed.")) return;
-                          setDeletingId(session.id);
-                          try {
-                            await onDelete(session.id);
-                          } finally {
-                            setDeletingId(null);
-                          }
-                        }}
-                        className="text-xs text-destructive hover:underline disabled:opacity-50 disabled:no-underline"
-                      >
-                        {deletingId === session.id ? "Deleting…" : "Delete session"}
-                      </button>
+                      {confirmDeleteId === session.id ? (
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs text-muted-foreground">Delete this session and its video?</span>
+                          <button
+                            disabled={deletingId === session.id}
+                            onClick={async () => {
+                              setDeletingId(session.id);
+                              setConfirmDeleteId(null);
+                              try {
+                                await onDelete(session.id);
+                              } finally {
+                                setDeletingId(null);
+                              }
+                            }}
+                            className="text-xs text-destructive font-medium hover:underline disabled:opacity-50"
+                          >
+                            {deletingId === session.id ? "Deleting…" : "Confirm"}
+                          </button>
+                          <button
+                            onClick={() => setConfirmDeleteId(null)}
+                            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          disabled={deletingId === session.id}
+                          onClick={() => setConfirmDeleteId(session.id)}
+                          className="text-xs text-destructive hover:underline disabled:opacity-50 disabled:no-underline"
+                        >
+                          Delete session
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>

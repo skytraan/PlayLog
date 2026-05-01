@@ -12,9 +12,10 @@ interface ChatInterfaceProps {
   /** When provided, timestamp tokens (m:ss) inside assistant replies become
    *  buttons that seek the active video. */
   onSeek?: (seconds: number) => void;
+  sendError?: string | null;
 }
 
-export function ChatInterface({ messages, onSend, sport: _sport, disabled = false, presetPrompts = [], onSeek }: ChatInterfaceProps) {
+export function ChatInterface({ messages, onSend, sport: _sport, disabled = false, presetPrompts = [], onSeek, sendError }: ChatInterfaceProps) {
   const [input, setInput] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -103,6 +104,9 @@ export function ChatInterface({ messages, onSend, sport: _sport, disabled = fals
               </button>
             ))}
           </div>
+        )}
+        {sendError && (
+          <p className="text-xs text-destructive mb-2">{sendError}</p>
         )}
         <form onSubmit={handleSubmit} className="flex items-center gap-2">
           <input

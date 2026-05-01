@@ -16,6 +16,7 @@ export function OvrGoal({ userId, currentOvr }: OvrGoalProps) {
   const [deadlineInput, setDeadlineInput] = useState("");
   const [errors, setErrors] = useState<{ target?: string; deadline?: string }>({});
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Pre-fill inputs when editing an existing goal
   useEffect(() => {
@@ -48,10 +49,13 @@ export function OvrGoal({ userId, currentOvr }: OvrGoalProps) {
       return;
     }
     setSaving(true);
+    setSaveError(null);
     try {
       await saveGoal({ userId, targetOvr: Number(targetInput), deadline: deadlineInput });
       setEditing(false);
       setErrors({});
+    } catch {
+      setSaveError("Could not save goal. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -60,6 +64,7 @@ export function OvrGoal({ userId, currentOvr }: OvrGoalProps) {
   const handleCancel = () => {
     setEditing(false);
     setErrors({});
+    setSaveError(null);
   };
 
   const daysLeft = savedGoal
@@ -129,6 +134,9 @@ export function OvrGoal({ userId, currentOvr }: OvrGoalProps) {
               {errors.deadline && <p className="mt-1 text-xs text-destructive">{errors.deadline}</p>}
             </div>
 
+            {saveError && (
+              <p className="text-xs text-destructive">{saveError}</p>
+            )}
             <div className="flex gap-2">
               <button
                 onClick={handleSave}

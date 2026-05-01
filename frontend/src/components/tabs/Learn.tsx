@@ -6,6 +6,7 @@ import { UploadArea } from "@/components/UploadArea";
 import { ChatInterface } from "@/components/ChatInterface";
 import { VideoPlayer, VideoPlayerHandle } from "@/components/VideoPlayer";
 import { useVideoAnalysis } from "@/hooks/useVideoAnalysis";
+import { useToast } from "@/hooks/use-toast";
 
 interface LearnProps {
   sport: Sport;
@@ -16,6 +17,7 @@ export function Learn({ sport, userId }: LearnProps) {
   const askCoach = useAction(api.coach.askCoach);
   const deleteSession = useMutation(api.sessions.deleteSession);
   const videoPlayerRef = useRef<VideoPlayerHandle>(null);
+  const { toast } = useToast();
 
   const { status, error, sessionId, currentVideo, analyze, reset } = useVideoAnalysis({
     userId,
@@ -30,6 +32,7 @@ export function Learn({ sport, userId }: LearnProps) {
   // latest history session, snapping the player right back to the previous
   // video. This flag forces the upload area open until the next upload.
   const [forceUpload, setForceUpload] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
 
   const rawSessions = useQuery(api.sessions.listSessionsWithFeedback, { userId });
 
@@ -68,7 +71,11 @@ export function Learn({ sport, userId }: LearnProps) {
       }
     } catch (err) {
       console.error("Failed to delete session", err);
-      window.alert("Could not delete that session — try again.");
+      toast({
+        title: "Could not delete session",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -126,10 +133,11 @@ export function Learn({ sport, userId }: LearnProps) {
 
   const handleSendMessage = async (content: string) => {
     if (!effectiveSessionId) return;
+    setChatError(null);
     try {
       await askCoach({ sessionId: effectiveSessionId, userMessage: content });
     } catch {
-      // no-op: failed reply won't appear
+      setChatError("Message failed to send. Please try again.");
     }
   };
 
@@ -179,7 +187,18 @@ export function Learn({ sport, userId }: LearnProps) {
       )}
 
       {error && (
-        <p className="text-xs text-destructive px-1">{error}</p>
+        <div className="border border-destructive/30 bg-destructive/5 rounded-lg px-4 py-3 flex items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-medium text-destructive">Analysis failed</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{error}</p>
+          </div>
+          <button
+            onClick={handleSwitchVideo}
+            className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors whitespace-nowrap flex-shrink-0"
+          >
+            Try again
+          </button>
+        </div>
       )}
 
       <SessionLibrary sessions={sessions} onSeek={handleSeek} onDelete={handleDeleteSession} />
@@ -191,6 +210,7 @@ export function Learn({ sport, userId }: LearnProps) {
         disabled={!effectiveSessionId}
         presetPrompts={presetPrompts}
         onSeek={handleSeek}
+        sendError={chatError}
       />
     </div>
   );
