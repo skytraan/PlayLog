@@ -1,6 +1,5 @@
 import { useState, useRef, useCallback } from "react";
 import { api, useMutation, useAction, type Id } from "@/lib/api";
-import { uploadAndIndexVideo, pollUntilReady } from "../lib/twelvelabs/videoIndexer";
 import { sampleVideoFrames, disposePoseLandmarker } from "../lib/mediapipe/pose-detector";
 import { scoreForehand } from "../lib/mediapipe/scoring-guides/forehand-scorer";
 import { scoreBackhand } from "../lib/mediapipe/scoring-guides/backhand-scorer";
@@ -91,7 +90,7 @@ export function useVideoAnalysis({
   const createSession = useMutation(api.sessions.createSession);
   const createAnalysis = useMutation(api.analyses.createAnalysis);
   const updateAnalysis = useMutation(api.analyses.updateAnalysis);
-  const analyzeVideo = useAction(api.twelvelabs.analyzeVideo);
+  const analyzeDirect = useAction(api.twelvelabs.analyzeDirect);
   const generateFeedback = useAction(api.coach.generateFeedback);
   const checkAndAwardBadges = useMutation(api.badges.checkAndAwardBadges);
 
@@ -135,43 +134,23 @@ export function useVideoAnalysis({
 
         if (abortRef.current) return;
 
-        // ── Step 2: TwelveLabs indexing ───────────────────────────────────────
+        // ── Step 2: Pegasus direct analysis ───────────────────────────────────
+        // Single call — TwelveLabs pulls the video from R2 itself, runs
+        // Pegasus, returns text. No more index/poll/analyze three-step dance.
         setStatus("analyzing");
 
-        const indexResult = await uploadAndIndexVideo({
-          sessionId: newSessionId,
-          analysisId: newAnalysisId,
-          sport,
-        });
-
-        if (abortRef.current) return;
-
-        // ── Step 3: Poll until TwelveLabs indexing is done ────────────────────
-        const pollResult = await pollUntilReady({
-          taskId: indexResult.taskId,
-          sessionId: newSessionId,
-          analysisId: newAnalysisId,
-        });
-
-        if (pollResult.status === "failed") {
-          throw new Error("TwelveLabs indexing failed");
-        }
-
-        if (abortRef.current) return;
-
-        // ── Step 4: Pegasus prompt analysis ───────────────────────────────────
         const prompt = `Analyze the ${sport} technique in this video. Focus on: ${requestedSections.join(", ")}.
 Identify strengths, weaknesses, and specific drills to improve each area.`;
 
-        await analyzeVideo({
+        await analyzeDirect({
+          sessionId: newSessionId,
           analysisId: newAnalysisId,
-          videoId: pollResult.videoId!,
           prompt,
         });
 
         if (abortRef.current) return;
 
-        // ── Step 5: MediaPipe pose scoring ────────────────────────────────────
+        // ── Step 3: MediaPipe pose scoring ────────────────────────────────────
         // Runs BEFORE coach feedback so the server can build an authoritative
         // timeline (pose key-frames + Pegasus anchors) and ground Claude's
         // timestamps against it.
@@ -205,7 +184,7 @@ Identify strengths, weaknesses, and specific drills to improve each area.`;
 
         if (abortRef.current) return;
 
-        // ── Step 6: Coach feedback (now grounded by pose timeline) ────────────
+        // ── Step 4: Coach feedback (now grounded by pose timeline) ────────────
         const newFeedbackId = await generateFeedback({
           sessionId: newSessionId,
           analysisId: newAnalysisId,
@@ -213,7 +192,7 @@ Identify strengths, weaknesses, and specific drills to improve each area.`;
 
         setFeedbackId(newFeedbackId);
 
-        // ── Step 7: Check and award badges ────────────────────────────────────
+        // ── Step 5: Check and award badges ────────────────────────────────────
         await checkAndAwardBadges({ userId });
 
         setStatus("ready");
@@ -232,7 +211,7 @@ Identify strengths, weaknesses, and specific drills to improve each area.`;
       createSession,
       createAnalysis,
       updateAnalysis,
-      analyzeVideo,
+      analyzeDirect,
       generateFeedback,
       checkAndAwardBadges,
     ]

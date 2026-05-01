@@ -45,3 +45,15 @@ twelvelabs.post(
     (args) => svc.analyzeVideo(args)
   )
 );
+
+twelvelabs.post(
+  "/analyzeDirect",
+  rpc(
+    z.object({
+      sessionId: z.string(),
+      analysisId: z.string(),
+      prompt: z.string(),
+    }),
+    (args) => svc.analyzeDirect(args)
+  )
+);
