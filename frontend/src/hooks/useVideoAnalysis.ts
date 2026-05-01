@@ -46,11 +46,6 @@ interface UseVideoAnalysisResult {
   reset: () => void;
 }
 
-// Stored under a per-user key so multiple profiles on the same browser don't
-// step on each other's "active" video. We only persist the session ID — the
-// video URL is rehydrated on demand from R2 via api.storage.getSessionVideoUrl.
-const ACTIVE_SESSION_KEY = (userId: string) => `playlog.activeSession.${userId}`;
-
 export function useVideoAnalysis({
   userId,
   sport,
@@ -58,25 +53,10 @@ export function useVideoAnalysis({
 }: UseVideoAnalysisParams): UseVideoAnalysisResult {
   const [status, setStatus] = useState<AnalysisStatus>("idle");
   const [error, setError] = useState<string | null>(null);
-  const [sessionId, setSessionIdState] = useState<Id<"sessions"> | null>(() => {
-    if (typeof window === "undefined") return null;
-    return (window.localStorage.getItem(ACTIVE_SESSION_KEY(userId)) as Id<"sessions"> | null) ?? null;
-  });
+  const [sessionId, setSessionId] = useState<Id<"sessions"> | null>(null);
   const [feedbackId, setFeedbackId] = useState<string | null>(null);
   const [currentVideo, setCurrentVideo] = useState<File | null>(null);
   const abortRef = useRef(false);
-
-  // Mirror state writes through to localStorage so a reload (or a tab switch
-  // that unmounts Learn) can rehydrate the active session.
-  const setSessionId = useCallback(
-    (id: Id<"sessions"> | null) => {
-      setSessionIdState(id);
-      if (typeof window === "undefined") return;
-      if (id) window.localStorage.setItem(ACTIVE_SESSION_KEY(userId), id);
-      else window.localStorage.removeItem(ACTIVE_SESSION_KEY(userId));
-    },
-    [userId]
-  );
 
   const reset = useCallback(() => {
     abortRef.current = true;
@@ -85,7 +65,7 @@ export function useVideoAnalysis({
     setSessionId(null);
     setFeedbackId(null);
     setCurrentVideo(null);
-  }, [setSessionId]);
+  }, []);
 
   const generateUploadUrl = useMutation(api.storage.generateUploadUrl);
   const createSession = useMutation(api.sessions.createSession);
