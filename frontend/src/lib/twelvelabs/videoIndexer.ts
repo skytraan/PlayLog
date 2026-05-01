@@ -1,25 +1,21 @@
-import { ConvexReactClient } from "convex/react";
-import { api } from "../../../../convex/_generated/api";
-import type { Id } from "../../../../convex/_generated/dataModel";
+import { api, callApi, type Id } from "@/lib/api";
 import type { TaskPollResult, VideoIndexResult } from "./types";
 
 /**
- * Trigger TwelveLabs indexing for a video already in Convex storage.
- * The video is fetched directly by the indexVideo action via its storage URL.
+ * Trigger TwelveLabs indexing for a video already in R2 storage.
+ * The indexVideo action presigns a read URL on the server side and hands it to
+ * TwelveLabs — same flow as the old Convex setup, just over a different bucket.
  */
-export async function uploadAndIndexVideo(
-  convex: ConvexReactClient,
-  params: {
-    sessionId: Id<"sessions">;
-    analysisId: Id<"analyses">;
-    sport: string;
-  }
-): Promise<VideoIndexResult> {
-  const indexId = await convex.action(api.twelvelabs.getOrCreateIndex, {
+export async function uploadAndIndexVideo(params: {
+  sessionId: Id<"sessions">;
+  analysisId: Id<"analyses">;
+  sport: string;
+}): Promise<VideoIndexResult> {
+  const indexId = await callApi(api.twelvelabs.getOrCreateIndex, {
     sport: params.sport,
   });
 
-  const taskId = await convex.action(api.twelvelabs.indexVideo, {
+  const taskId = await callApi(api.twelvelabs.indexVideo, {
     sessionId: params.sessionId,
     analysisId: params.analysisId,
     indexId,
@@ -35,22 +31,19 @@ export async function uploadAndIndexVideo(
 /**
  * Poll TwelveLabs task status until indexing completes or fails.
  */
-export async function pollUntilReady(
-  convex: ConvexReactClient,
-  params: {
-    taskId: string;
-    sessionId: Id<"sessions">;
-    analysisId: Id<"analyses">;
-    intervalMs?: number;
-    timeoutMs?: number;
-  }
-): Promise<TaskPollResult> {
+export async function pollUntilReady(params: {
+  taskId: string;
+  sessionId: Id<"sessions">;
+  analysisId: Id<"analyses">;
+  intervalMs?: number;
+  timeoutMs?: number;
+}): Promise<TaskPollResult> {
   const intervalMs = params.intervalMs ?? 8000;
   const timeoutMs = params.timeoutMs ?? 300_000;
   const deadline = Date.now() + timeoutMs;
 
   while (Date.now() < deadline) {
-    const result = await convex.action(api.twelvelabs.getTaskStatus, {
+    const result = await callApi(api.twelvelabs.getTaskStatus, {
       taskId: params.taskId,
       sessionId: params.sessionId,
       analysisId: params.analysisId,

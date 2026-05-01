@@ -9,6 +9,7 @@ node_modules
 # Build output
 dist
 dist-ssr
+server/dist
 
 # Environment variables
 .env

@@ -1,83 +1,91 @@
 # PlayLog
 AI-powered sports coaching web app.
 
+## Stack
+
+- **Frontend** — React + Vite + TypeScript (Vercel)
+- **Backend** — Hono on Node, deployable to Railway / Fly / any Node host
+- **Database** — Postgres (Railway / Supabase / Neon — anything that speaks plain Postgres)
+- **Object storage** — Cloudflare R2 (S3-compatible, zero egress fees)
+- **CV** — MediaPipe (browser-side on the uploaded video)
+- **External APIs** — TwelveLabs (Pegasus video understanding) and Gemini (coaching feedback)
+
 ## Project Structure
 
 ```
 PlayLog/
-├── convex/      # backend — Convex queries, mutations, schema
-├── frontend/    # React + Vite + TypeScript (Convex client)
-├── src/         # Vite app entry (root-level)
-└── package.json # root — Convex backend scripts
+├── server/        # Hono backend — routes, db client, R2 storage, external services
+│   └── src/
+│       ├── routes/    # one Hono router per domain (users, sessions, ...)
+│       ├── services/  # external API integrations (TwelveLabs)
+│       ├── db/        # postgres client, schema.sql, migrate runner, mappers
+│       ├── storage/   # R2 client + presigned URL helpers
+│       └── lib/       # env, errors, rpc helper
+├── frontend/      # React + Vite app
+│   └── src/lib/api/   # typed client + Convex-shaped hooks (useQuery / useMutation / useAction)
+└── package.json   # root scripts that fan out to server/ and frontend/
 ```
 
-## Prerequisites
-- Node.js 18+
-- npm
-- A [Convex](https://convex.dev) account
+The frontend talks to the backend over a small RPC convention: every endpoint
+is `POST /api/<module>/<name>` with a JSON body. The `api` object in
+`frontend/src/lib/api/api.ts` mirrors what `convex/_generated/api` used to
+expose, so React components keep using `useQuery(api.x.y, args)` and friends.
 
-## Backend (Convex)
+## Setup
 
-### Setup
+### 1. Backend
 
 ```bash
-# Install Convex CLI
+cd server
+cp .env.example .env       # fill in DATABASE_URL, R2_*, TWELVELABS_API_KEY, GEMINI_API_KEY
 npm install
-
-# Log in to Convex (opens browser)
-npx convex login
-
-# Initialize your Convex project (first time only)
-npx convex dev --configure
-```
-
-Then copy and fill in your env:
-
-```bash
-cp .env.example .env.local
+npm run migrate            # creates the Postgres tables
+npm run dev                # boots Hono on :8787
 ```
 
 | Variable | Description |
 |---|---|
-| `CONVEX_DEPLOYMENT` | Your deployment name, e.g. `dev:your-project-name` |
+| `DATABASE_URL` | Postgres connection string |
+| `R2_ENDPOINT` | `https://<account>.r2.cloudflarestorage.com` |
+| `R2_BUCKET` | R2 bucket name |
+| `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | R2 token |
+| `R2_PUBLIC_BASE_URL` | _(optional)_ CDN base. If set, video reads return `<base>/<key>` instead of presigned URLs — useful for TwelveLabs which sometimes balks at presigned URLs |
+| `TWELVELABS_API_KEY` | TwelveLabs API key |
+| `GEMINI_API_KEY` | Gemini API key |
+| `CORS_ORIGIN` | Comma-separated allowed origins, or `*` |
+| `PORT` | Port to listen on (Railway sets this) |
 
-### Running
-
-```bash
-npm run backend   # starts Convex dev server
-```
-
-## Frontend
-
-### Setup
+### 2. Frontend
 
 ```bash
 cd frontend
+cp .env.example .env       # set VITE_API_URL to wherever the server is running
 npm install
-cp .env.example .env.local
+npm run dev                # Vite on :8080
 ```
 
-| Variable | Description |
-|---|---|
-| `VITE_CONVEX_URL` | e.g. `https://your-project-name.convex.cloud` |
-| `VITE_CONVEX_SITE_URL` | e.g. `https://your-project-name.convex.site` |
-| `TWELVELABS_API_KEY` | Your TwelveLabs API key |
-| `GEMINI_API_KEY` | Your GEMINI API key |
-
-### Running
+### 3. Run both together
 
 ```bash
-npm run dev   # starts Vite dev server
+# from repo root
+npm run backend     # terminal 1
+npm run frontend    # terminal 2
 ```
 
-## Running Both Together
-
-In two separate terminals:
+## Tests
 
 ```bash
-# Terminal 1 — backend
-npm run backend
-
-# Terminal 2 — frontend
-cd frontend && npm run dev
+npm --prefix server   run test
+npm --prefix frontend run test
 ```
+
+The server twelvelabs tests stub fetch + the SQL client. Database-touching
+route tests (sessions, users, etc.) intentionally aren't shipped — they need a
+real Postgres or `pg-mem` to be meaningful, which is left as future work.
+
+## Deploying
+
+- **Server** — point Railway at `/server`, set start command to `npm start`,
+  set the env vars above. Run `npm run migrate` once after first deploy.
+- **Frontend** — Vercel: project root `/frontend`, build `npm run build`,
+  output `dist`. Set `VITE_API_URL` to the deployed server URL.

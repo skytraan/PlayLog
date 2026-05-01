@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "convex/react";
-import { api } from "../../../convex/_generated/api";
-import type { Id } from "../../../convex/_generated/dataModel";
+import { api, useQuery, type Id } from "@/lib/api";
 import AppLayout from "@/components/AppLayout";
 import { Onboarding, UserProfile } from "@/components/Onboarding";
 

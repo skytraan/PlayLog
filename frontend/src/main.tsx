@@ -1,15 +1,14 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { ConvexProvider, ConvexReactClient } from 'convex/react'
 import './index.css'
 import App from './App.tsx'
 
-const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string)
+// React Query is initialized inside App (already wraps the tree). The old
+// ConvexProvider is gone — every API call now goes through the typed client
+// in src/lib/api against the Hono backend.
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ConvexProvider client={convex}>
-      <App />
-    </ConvexProvider>
+    <App />
   </StrictMode>,
 )

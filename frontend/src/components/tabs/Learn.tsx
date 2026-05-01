@@ -1,7 +1,5 @@
 import { useRef } from "react";
-import { useAction, useQuery } from "convex/react";
-import { api } from "../../../../convex/_generated/api";
-import type { Id } from "../../../../convex/_generated/dataModel";
+import { api, useAction, useQuery, type Id } from "@/lib/api";
 import { Sport, ChatMessage, Session } from "@/types/playlog";
 import { SessionLibrary } from "@/components/SessionLibrary";
 import { UploadArea } from "@/components/UploadArea";

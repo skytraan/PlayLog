@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "../../../convex/_generated/api";
-import type { Id } from "../../../convex/_generated/dataModel";
+import { api, useMutation, useQuery, type Id } from "@/lib/api";
 import { Target, Pencil, X } from "lucide-react";
 
 interface OvrGoalProps {

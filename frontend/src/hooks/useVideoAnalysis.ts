@@ -1,7 +1,5 @@
 import { useState, useRef, useCallback } from "react";
-import { useConvex, useMutation, useAction } from "convex/react";
-import { api } from "../../../convex/_generated/api";
-import type { Id } from "../../../convex/_generated/dataModel";
+import { api, useMutation, useAction, type Id } from "@/lib/api";
 import { uploadAndIndexVideo, pollUntilReady } from "../lib/twelvelabs/videoIndexer";
 import { sampleVideoFrames, disposePoseLandmarker } from "../lib/mediapipe/pose-detector";
 import { scoreForehand } from "../lib/mediapipe/scoring-guides/forehand-scorer";
@@ -53,7 +51,6 @@ export function useVideoAnalysis({
   sport,
   requestedSections,
 }: UseVideoAnalysisParams): UseVideoAnalysisResult {
-  const convex = useConvex();
   const [status, setStatus] = useState<AnalysisStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<Id<"sessions"> | null>(null);
@@ -87,21 +84,24 @@ export function useVideoAnalysis({
       setCurrentVideo(videoFile);
 
       try {
-        // ── Step 1: Upload to Convex storage ──────────────────────────────────
+        // ── Step 1: Upload to R2 via presigned PUT ────────────────────────────
+        // The server returns a short-lived PUT URL; we send the bytes directly
+        // to Cloudflare R2 (no proxy through our backend), then pass the
+        // returned storageId into createSession.
         setStatus("uploading");
 
-        const uploadUrl = await generateUploadUrl({});
+        const { uploadUrl, storageId } = await generateUploadUrl({
+          contentType: videoFile.type || "video/mp4",
+        });
         const uploadRes = await fetch(uploadUrl, {
-          method: "POST",
-          headers: { "Content-Type": videoFile.type },
+          method: "PUT",
+          headers: { "Content-Type": videoFile.type || "video/mp4" },
           body: videoFile,
         });
 
         if (!uploadRes.ok) {
           throw new Error(`Upload failed: ${uploadRes.statusText}`);
         }
-
-        const { storageId } = await uploadRes.json() as { storageId: Id<"_storage"> };
 
         const newSessionId = await createSession({
           userId,
@@ -118,7 +118,7 @@ export function useVideoAnalysis({
         // ── Step 2: TwelveLabs indexing ───────────────────────────────────────
         setStatus("analyzing");
 
-        const indexResult = await uploadAndIndexVideo(convex, {
+        const indexResult = await uploadAndIndexVideo({
           sessionId: newSessionId,
           analysisId: newAnalysisId,
           sport,
@@ -127,7 +127,7 @@ export function useVideoAnalysis({
         if (abortRef.current) return;
 
         // ── Step 3: Poll until TwelveLabs indexing is done ────────────────────
-        const pollResult = await pollUntilReady(convex, {
+        const pollResult = await pollUntilReady({
           taskId: indexResult.taskId,
           sessionId: newSessionId,
           analysisId: newAnalysisId,
@@ -205,7 +205,6 @@ Identify strengths, weaknesses, and specific drills to improve each area.`;
       userId,
       sport,
       requestedSections,
-      convex,
       generateUploadUrl,
       createSession,
       createAnalysis,
