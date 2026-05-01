@@ -42,6 +42,19 @@ describe("momentsFromPoseAnalysis", () => {
     expect(moments[2]).toEqual({ seconds: 5, label: "0:05 forehand impact", source: "pose" });
   });
 
+  test("surfaces best/worst quality + score in the label", () => {
+    const labeled = JSON.stringify({
+      technique: "forehand",
+      keyFrames: [
+        { timestampMs: 5000, phase: "impact", quality: "best",  score: 84 },
+        { timestampMs: 23000, phase: "impact", quality: "worst", score: 51 },
+      ],
+    });
+    const moments = momentsFromPoseAnalysis(labeled);
+    expect(moments[0]!.label).toBe("0:05 forehand impact (BEST 84)");
+    expect(moments[1]!.label).toBe("0:23 forehand impact (WORST 51)");
+  });
+
   test("returns empty for null/invalid input", () => {
     expect(momentsFromPoseAnalysis(null)).toEqual([]);
     expect(momentsFromPoseAnalysis("not json")).toEqual([]);

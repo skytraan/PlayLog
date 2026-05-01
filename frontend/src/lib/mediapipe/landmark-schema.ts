@@ -172,6 +172,13 @@ export const FrameMetricsSchema = z.object({
 
   // Skip scoring this frame if below threshold (e.g. 0.6)
   visibilityConfidence: z.number().min(0).max(1),
+
+  // Set when this frame was selected as a best/worst exemplar of its phase.
+  // The coach uses these labels to compare strong vs weak reps in the prompt.
+  quality: z.enum(["best", "worst"]).optional(),
+  // Per-frame score (0–100) for the labeled exemplars only. Lets the coach
+  // reference concrete numbers ("strongest impact at 0:05 — 84 vs weakest 51").
+  score: z.number().min(0).max(100).optional(),
 });
 
 export type FrameMetrics = z.infer<typeof FrameMetricsSchema>;

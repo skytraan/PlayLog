@@ -101,7 +101,13 @@ coach.post(
 Authoritative timeline (the ONLY moments you may reference):
 ${timelineForPrompt}
 
-Generate coaching feedback as JSON: a 2-3 sentence summary, an array of strengths (each with a timestamp from the timeline above), an array of improvements (each formatted as "issue — timestamp — fix"), and an array of drills (one per improvement).
+The timeline includes BEST and WORST exemplars per phase (with scores). Coach
+the contrast: when a phase has both, your feedback for that phase MUST
+reference both moments — what made the best work and what broke down in the
+worst. A coach who only celebrates highlights is a flatterer; a coach who
+only lists problems is discouraging. Do both, in the same beat.
+
+Generate coaching feedback as JSON: a 2-3 sentence summary, an array of strengths (each with a timestamp from the timeline above), an array of improvements (each formatted as "issue — timestamp — fix" and citing the WORST timestamp where applicable), and an array of drills (one per improvement).
 
 Hard rule: every timestamp you use MUST come from the timeline above, written in m:ss format. If a moment isn't in the timeline, describe it without a timestamp rather than guess.`;
 
@@ -224,7 +230,7 @@ coach.post(
     );
     const authoritativeSeconds = timeline.map((m: TimelineMoment) => m.seconds);
     const timelineSection = timeline.length > 0
-      ? `\n\nAuthoritative timeline (the ONLY moments you may reference; m:ss):\n${formatTimelineForPrompt(timeline)}\n\nHard rule: every timestamp you use MUST come from the timeline above. If a moment isn't in the timeline, describe it without a timestamp.`
+      ? `\n\nAuthoritative timeline (the ONLY moments you may reference; m:ss). Entries tagged BEST/WORST are exemplars of the same phase — when both appear, contrast them in your reply rather than picking one.\n${formatTimelineForPrompt(timeline)}\n\nHard rule: every timestamp you use MUST come from the timeline above. If a moment isn't in the timeline, describe it without a timestamp.`
       : "";
 
     const systemContext = latestFeedback

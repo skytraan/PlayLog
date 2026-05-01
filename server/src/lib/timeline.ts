@@ -45,6 +45,8 @@ export function extractTimestampsFromText(text: string): number[] {
 interface KeyFrameLite {
   timestampMs: number;
   phase: string;
+  quality?: "best" | "worst";
+  score?: number;
 }
 
 interface PoseAnalysisLite {
@@ -73,10 +75,16 @@ export function momentsFromPoseAnalysis(serialized: string | null | undefined): 
     for (const kf of r.keyFrames ?? []) {
       const seconds = Math.round(kf.timestampMs / 1000);
       const phase = kf.phase.replace(/_/g, " ");
-      const label = technique
+      // Surface the best/worst tag + per-frame score so the coach has the
+      // contrast spelled out: "0:05 forehand impact (BEST 84)" vs
+      // "0:23 forehand impact (WORST 51)".
+      const qualityTag = kf.quality
+        ? ` (${kf.quality.toUpperCase()}${kf.score !== undefined ? ` ${kf.score}` : ""})`
+        : "";
+      const base = technique
         ? `${fmt(seconds)} ${technique} ${phase}`
         : `${fmt(seconds)} ${phase}`;
-      out.push({ seconds, label, source: "pose" });
+      out.push({ seconds, label: `${base}${qualityTag}`, source: "pose" });
     }
   }
   return out;

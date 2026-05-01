@@ -175,7 +175,10 @@ export function runScoringPipeline(
     allScored.push({ metrics, score, phase });
   }
 
-  // ── Select key frames — best-scoring frame per phase ─────────────────────
+  // ── Select key frames — best AND worst per phase ─────────────────────────
+  // Coaching value comes from contrast: "your strongest impact at 0:05 vs
+  // your weakest at 0:23". A highlight reel of best-only frames hides the
+  // exact reps the user needs to learn from.
   const phaseOrder: StrokePhase[] = [
     "preparation",
     "backswing",
@@ -185,15 +188,34 @@ export function runScoringPipeline(
   ];
 
   const keyFrames: FrameMetrics[] = [];
-  const keyScores: number[] = [];
 
   for (const phase of phaseOrder) {
     const inPhase = allScored.filter((f) => f.phase === phase);
     if (inPhase.length === 0) continue;
+
     const best = inPhase.reduce((a, b) => (a.score.overall >= b.score.overall ? a : b));
-    keyFrames.push(best.metrics);
-    keyScores.push(best.score.overall);
+    keyFrames.push({
+      ...best.metrics,
+      quality: "best",
+      score: Math.round(best.score.overall),
+    });
+
+    // Only emit a "worst" frame when it's actually a different rep — for
+    // single-instance phases there's nothing to contrast against.
+    if (inPhase.length > 1) {
+      const worst = inPhase.reduce((a, b) => (a.score.overall <= b.score.overall ? a : b));
+      if (worst.metrics.timestampMs !== best.metrics.timestampMs) {
+        keyFrames.push({
+          ...worst.metrics,
+          quality: "worst",
+          score: Math.round(worst.score.overall),
+        });
+      }
+    }
   }
+
+  // Sort chronologically so timeline display reads top-to-bottom in time order.
+  keyFrames.sort((a, b) => a.timestampMs - b.timestampMs);
 
   // ── Summary aggregation ───────────────────────────────────────────────────
   const avg = (arr: number[]) =>
@@ -209,8 +231,12 @@ export function runScoringPipeline(
         followThroughFrames.length
       : 0;
 
-  const overallScore = keyScores.length > 0
-    ? Math.round(keyScores.reduce((a, b) => a + b, 0) / keyScores.length)
+  // Honest session score — average across every scored frame, not just the
+  // best per phase. The old version (best-per-phase average) systematically
+  // inflated scores and undermined coaching credibility ("78 overall, but my
+  // form fell apart half the time").
+  const overallScore = allScored.length > 0
+    ? Math.round(allScored.reduce((s, f) => s + f.score.overall, 0) / allScored.length)
     : 0;
 
   return {
