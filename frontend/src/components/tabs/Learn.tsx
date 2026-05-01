@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { api, useAction, useQuery, type Id } from "@/lib/api";
+import { api, useAction, useMutation, useQuery, type Id } from "@/lib/api";
 import { Sport, ChatMessage, Session } from "@/types/playlog";
 import { SessionLibrary } from "@/components/SessionLibrary";
 import { UploadArea } from "@/components/UploadArea";
@@ -14,6 +14,7 @@ interface LearnProps {
 
 export function Learn({ sport, userId }: LearnProps) {
   const askCoach = useAction(api.coach.askCoach);
+  const deleteSession = useMutation(api.sessions.deleteSession);
   const videoPlayerRef = useRef<VideoPlayerHandle>(null);
 
   const { status, error, sessionId, currentVideo, analyze, reset } = useVideoAnalysis({
@@ -54,6 +55,21 @@ export function Learn({ sport, userId }: LearnProps) {
   const handleUpload = async (file: File) => {
     setForceUpload(false);
     await analyze(file);
+  };
+
+  // Deleting the active session would leave the player pointed at a row that
+  // no longer exists; reset local state to drop back into upload mode.
+  const handleDeleteSession = async (id: string) => {
+    try {
+      await deleteSession({ sessionId: id as Id<"sessions"> });
+      if (id === effectiveSessionId) {
+        setForceUpload(true);
+        reset();
+      }
+    } catch (err) {
+      console.error("Failed to delete session", err);
+      window.alert("Could not delete that session — try again.");
+    }
   };
 
   // Extract MediaPipe cue timestamps (in seconds) from the most-recent analysis
@@ -166,7 +182,7 @@ export function Learn({ sport, userId }: LearnProps) {
         <p className="text-xs text-destructive px-1">{error}</p>
       )}
 
-      <SessionLibrary sessions={sessions} onSeek={handleSeek} />
+      <SessionLibrary sessions={sessions} onSeek={handleSeek} onDelete={handleDeleteSession} />
 
       <ChatInterface
         messages={messages}

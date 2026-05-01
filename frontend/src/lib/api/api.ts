@@ -52,6 +52,10 @@ export const api = {
       { userId: Id<"users"> },
       SessionWithFeedback[]
     >("sessions", "listSessionsWithFeedback"),
+    deleteSession: defMutation<{ sessionId: Id<"sessions"> }, null>(
+      "sessions",
+      "deleteSession"
+    ),
   },
 
   analyses: {
