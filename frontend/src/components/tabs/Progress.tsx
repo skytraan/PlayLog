@@ -7,6 +7,7 @@ import { FifaPlayerCard } from "@/components/FifaPlayerCard";
 import { OvrGoal } from "@/components/OvrGoal";
 import { ProgressTimeline } from "@/components/ProgressTimeline";
 import { TENNIS_SKILLS, getLevelTitle } from "@/types/playlog";
+import { ALL_TENNIS_BADGES } from "@/data/mockData";
 
 interface ProgressProps {
   userId: Id<"users">;
@@ -99,35 +100,49 @@ export function Progress({ userId, userName }: ProgressProps) {
     totalSessions,
   };
 
+  const timelineData = [...sessions]
+    .reverse()
+    .map((s, i) => ({ date: `S${i + 1}`, ovr: s.overallScore ?? 0 }));
+
+  const delta =
+    timelineData.length >= 2
+      ? `+${timelineData[timelineData.length - 1].ovr - timelineData[0].ovr}`
+      : undefined;
+
   return (
     <div className="space-y-6">
-      {/* Top row: FIFA card + OVR goal */}
-      <div className="flex flex-col sm:flex-row gap-6 items-start">
-        <div className="w-full sm:w-auto">
+      {/* Top row: FIFA card (gradient container) + OVR goal */}
+      <div className="grid grid-cols-1 lg:grid-cols-[auto_1fr] gap-6 items-stretch">
+        <div
+          className="border border-border rounded-2xl p-4 flex items-center justify-center"
+          style={{ background: "radial-gradient(ellipse at top, hsl(153 60% 12%), hsl(222 20% 8%) 65%)" }}
+        >
           <FifaPlayerCard name={userName} ratings={fifaRatings} />
         </div>
         <div className="flex-1">
-          <OvrGoal userId={userId} currentOvr={card.overallRating} />
+          <OvrGoal
+            userId={userId}
+            currentOvr={card.overallRating}
+            totalSessions={totalSessions}
+            streak={0}
+            earnedBadgesCount={earnedBadges.length}
+            totalBadges={ALL_TENNIS_BADGES.length}
+          />
         </div>
       </div>
 
-      {/* Main row: player card left, timeline right */}
+      {/* Challenge banner — always visible */}
+      <ActiveChallenge
+        challenge={card.activeChallenge ?? "Upload your first session and get a complete skill breakdown from your AI coach"}
+        setDate={card.challengeSetDate}
+      />
+
+      {/* Timeline + player card */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        <ProgressTimeline data={timelineData} delta={delta} />
         <PlayerCardComponent card={card} />
-        <ProgressTimeline data={
-          [...sessions].reverse().map((s, i) => ({
-            date: `Session ${i + 1}`,
-            ovr: s.overallScore ?? 0,
-          }))
-        } />
       </div>
 
-      {card.activeChallenge && (
-        <ActiveChallenge
-          challenge={card.activeChallenge}
-          setDate={card.challengeSetDate}
-        />
-      )}
       <BadgeGrid earnedBadges={earnedBadges} />
     </div>
   );

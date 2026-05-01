@@ -1,83 +1,85 @@
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
-
 interface DataPoint {
   date: string;
   ovr: number;
-  label?: string;
 }
 
 interface ProgressTimelineProps {
   data?: DataPoint[];
+  delta?: string;
 }
 
-const emptyState = (
-  <div className="flex items-center justify-center h-full">
-    <p className="text-sm text-muted-foreground text-center">
-      No sessions yet. Upload your first session to start tracking progress.
-    </p>
-  </div>
-);
-
-const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: { value: number }[]; label?: string }) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-card border border-border rounded-md px-3 py-2 text-sm shadow-md">
-        <p className="text-muted-foreground text-xs">{label}</p>
-        <p className="font-semibold text-foreground">OVR {payload[0].value}</p>
-      </div>
-    );
-  }
-  return null;
-};
-
-export function ProgressTimeline({ data = [] }: ProgressTimelineProps) {
-  const hasData = data.length > 0;
+function Sparkline({ data }: { data: DataPoint[] }) {
+  const pad = 6;
+  const w = 320;
+  const h = 120;
+  const min = Math.min(...data.map((d) => d.ovr)) - 4;
+  const max = Math.max(...data.map((d) => d.ovr)) + 4;
+  const x = (i: number) => pad + (i * (w - pad * 2)) / Math.max(data.length - 1, 1);
+  const y = (v: number) => pad + (h - pad * 2) * (1 - (v - min) / Math.max(max - min, 1));
+  const path = data.map((d, i) => `${i === 0 ? "M" : "L"} ${x(i)} ${y(d.ovr)}`).join(" ");
+  const area = `${path} L ${x(data.length - 1)} ${h - pad} L ${x(0)} ${h - pad} Z`;
 
   return (
-    <div className="border border-border rounded-lg bg-card overflow-hidden h-full flex flex-col">
-      <div className="px-5 py-4 border-b border-border">
-        <h3 className="text-sm font-semibold text-foreground">Progress Timeline</h3>
-        <p className="text-xs text-muted-foreground mt-0.5">Overall rating over time</p>
-      </div>
+    <svg viewBox={`0 0 ${w} ${h}`} className="w-full" style={{ height: h }}>
+      <defs>
+        <linearGradient id="sparkGrad" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stopColor="hsl(153 60% 45%)" stopOpacity="0.35" />
+          <stop offset="100%" stopColor="hsl(153 60% 45%)" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={area} fill="url(#sparkGrad)" />
+      <path d={path} fill="none" stroke="hsl(153 60% 50%)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+      {data.map((d, i) => (
+        <circle
+          key={i}
+          cx={x(i)}
+          cy={y(d.ovr)}
+          r={i === data.length - 1 ? 4 : 2.5}
+          fill={i === data.length - 1 ? "hsl(153 60% 55%)" : "hsl(222 18% 15%)"}
+          stroke="hsl(153 60% 50%)"
+          strokeWidth={i === data.length - 1 ? 2 : 1.5}
+        />
+      ))}
+    </svg>
+  );
+}
 
-      <div className="flex-1 px-2 py-4 min-h-[220px]">
-        {!hasData ? emptyState : (
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data} margin={{ top: 4, right: 16, bottom: 4, left: -16 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis
-                dataKey="date"
-                tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis
-                domain={([min, max]: [number, number]) => [Math.max(0, Math.floor(min / 10) * 10 - 10), Math.min(100, Math.ceil(max / 10) * 10 + 10)]}
-                tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                tickLine={false}
-                axisLine={false}
-              />
-              <Tooltip content={<CustomTooltip />} />
-              <Line
-                type="monotone"
-                dataKey="ovr"
-                stroke="#22c55e"
-                strokeWidth={2}
-                dot={{ fill: "#22c55e", r: 4, strokeWidth: 0 }}
-                activeDot={{ r: 6, fill: "#22c55e" }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+export function ProgressTimeline({ data = [], delta }: ProgressTimelineProps) {
+  const hasData = data.length >= 2;
+
+  return (
+    <div className="bg-card border border-border rounded-2xl p-5 h-full flex flex-col">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-semibold text-foreground">OVR over time</h3>
+        {delta && (
+          <div className="flex items-center gap-1 text-[11px] text-muted-foreground bg-secondary rounded-md px-2 py-1">
+            <span className="text-primary">▲ {delta}</span>
+          </div>
         )}
       </div>
+
+      {!hasData ? (
+        <div className="flex-1 flex items-center justify-center min-h-[120px]">
+          <p className="text-sm text-muted-foreground text-center">
+            No sessions yet. Upload your first session to start tracking progress.
+          </p>
+        </div>
+      ) : (
+        <>
+          <Sparkline data={data} />
+          <div
+            className="grid mt-2 text-[10px] font-mono text-muted-foreground"
+            style={{ gridTemplateColumns: `repeat(${data.length}, 1fr)` }}
+          >
+            {data.map((d, i) => (
+              <div key={i} className="text-center">
+                <div>{d.date}</div>
+                <div className="text-foreground/70 font-bold mt-0.5">{d.ovr}</div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

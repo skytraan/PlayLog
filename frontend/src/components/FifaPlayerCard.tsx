@@ -94,11 +94,11 @@ export function FifaPlayerCard({ name, photoUrl, ratings }: FifaPlayerCardProps)
   return (
     <div className="flex justify-center py-4">
       <div
-        className="relative select-none"
+        className="relative select-none transition-transform hover:scale-[1.02]"
         style={{
-          width: 220,
+          width: 230,
           aspectRatio: "2 / 3",
-          borderRadius: 12,
+          borderRadius: 14,
           background: s.bg,
           boxShadow: s.shadow,
           padding: 1,
@@ -106,12 +106,12 @@ export function FifaPlayerCard({ name, photoUrl, ratings }: FifaPlayerCardProps)
       >
         {/* Inner card border */}
         <div
-          className="absolute inset-[6px] rounded-[8px] pointer-events-none"
+          className="absolute inset-[6px] rounded-[10px] pointer-events-none"
           style={{ border: `1px solid ${s.border}` }}
         />
 
         <div className="flex flex-col h-full px-4 pt-3 pb-3">
-          {/* Top row: OVR + sport */}
+          {/* Top row: OVR + tier */}
           <div className="flex items-start justify-between">
             <div className="flex flex-col items-center leading-none">
               <span className="text-4xl font-black" style={{ color: s.textColor, textShadow: "0 1px 2px rgba(0,0,0,0.2)" }}>
@@ -122,6 +122,7 @@ export function FifaPlayerCard({ name, photoUrl, ratings }: FifaPlayerCardProps)
               </span>
               <span className="text-base mt-1">🎾</span>
             </div>
+            <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: s.labelColor }}>{tier}</span>
           </div>
 
           {/* Player photo */}

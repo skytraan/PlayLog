@@ -1,31 +1,24 @@
-import { useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from "react";
+import { useRef, useEffect, useCallback, forwardRef, useImperativeHandle, useState } from "react";
 import { Play, Pause } from "lucide-react";
-import { useState } from "react";
 
 export interface VideoPlayerHandle {
   seekTo: (seconds: number) => void;
 }
 
 interface VideoPlayerProps {
-  /** Local file (immediately after upload). One of file/src is required. */
   file?: File;
-  /** Remote URL (e.g. R2 presigned read URL) — used after a reload when the
-   *  original File object is no longer in memory. */
   src?: string;
-  /** Optional list of cue points to mark on the progress bar (in seconds) */
   cues?: number[];
 }
 
 export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
   ({ file, src, cues = [] }, ref) => {
     const videoRef = useRef<HTMLVideoElement>(null);
+    const trackRef = useRef<HTMLDivElement>(null);
     const [playing, setPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
 
-    // Two source modes: local File (createObjectURL + revoke), or a plain URL
-    // string (just set src directly). The else-branch lets the player rehydrate
-    // a session's R2 video after the user reloads the page or navigates back.
     useEffect(() => {
       if (file) {
         const url = URL.createObjectURL(file);
@@ -69,9 +62,14 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
 
     const handleEnded = () => setPlaying(false);
 
-    const handleScrub = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const t = parseFloat(e.target.value);
-      if (videoRef.current) videoRef.current.currentTime = t;
+    const seekToPosition = (e: React.MouseEvent<HTMLDivElement>) => {
+      const track = trackRef.current;
+      const video = videoRef.current;
+      if (!track || !video || !duration) return;
+      const rect = track.getBoundingClientRect();
+      const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      const t = pct * duration;
+      video.currentTime = t;
       setCurrentTime(t);
     };
 
@@ -81,60 +79,72 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
       return `${m}:${sec.toString().padStart(2, "0")}`;
     };
 
+    const pct = duration > 0 ? (currentTime / duration) * 100 : 0;
+
     return (
-      <div className="rounded-lg overflow-hidden border border-border bg-black">
-        {/* Video element */}
+      <div className="rounded-2xl overflow-hidden border border-border bg-black">
         <video
           ref={videoRef}
-          className="w-full max-h-64 object-contain bg-black"
+          className="w-full max-h-72 object-contain bg-black"
           onTimeUpdate={handleTimeUpdate}
           onLoadedMetadata={handleLoadedMetadata}
           onEnded={handleEnded}
           playsInline
-          muted={false}
         />
 
-        {/* Controls */}
-        <div className="bg-card px-3 py-2 space-y-1.5">
-          {/* Progress bar + cue markers */}
-          <div className="relative">
-            <input
-              type="range"
-              min={0}
-              max={duration || 1}
-              step={0.1}
-              value={currentTime}
-              onChange={handleScrub}
-              className="w-full h-1.5 accent-primary cursor-pointer"
+        <div className="bg-card px-4 py-3 space-y-2">
+          {/* Custom scrubber track */}
+          <div
+            ref={trackRef}
+            className="relative h-8 cursor-pointer"
+            onClick={seekToPosition}
+          >
+            {/* Track background */}
+            <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-1 bg-secondary rounded-full" />
+            {/* Progress fill */}
+            <div
+              className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-primary/70 rounded-full pointer-events-none"
+              style={{ width: `${pct}%` }}
             />
             {/* Cue markers */}
             {duration > 0 && cues.map((cue) => (
               <button
                 key={cue}
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   if (videoRef.current) {
                     videoRef.current.currentTime = cue;
                     setCurrentTime(cue);
                   }
                 }}
-                title={fmt(cue)}
-                className="absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-primary border border-background hover:scale-125 transition-transform"
-                style={{ left: `calc(${(cue / duration) * 100}% - 4px)` }}
+                title={`Key moment · ${fmt(cue)}`}
+                className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-5 rounded-sm bg-amber-400/80 hover:bg-amber-300 hover:h-6 transition-all z-10"
+                style={{ left: `${(cue / duration) * 100}%` }}
               />
             ))}
+            {/* Playhead */}
+            <div
+              className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-primary border-2 border-background shadow pointer-events-none"
+              style={{ left: `${pct}%` }}
+            />
           </div>
 
-          {/* Play + time */}
-          <div className="flex items-center gap-3">
-            <button
-              onClick={togglePlay}
-              className="text-foreground hover:text-primary transition-colors"
-            >
-              {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-            </button>
-            <span className="text-xs text-muted-foreground font-mono">
-              {fmt(currentTime)} / {fmt(duration)}
-            </span>
+          {/* Controls row */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <button onClick={togglePlay} className="text-foreground hover:text-primary transition-colors">
+                {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+              </button>
+              <span className="text-xs text-muted-foreground font-mono">
+                {fmt(currentTime)} / {fmt(duration)}
+              </span>
+            </div>
+            {cues.length > 0 && (
+              <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                <span className="w-2 h-2 rounded-sm bg-amber-400/80 flex-shrink-0" />
+                <span>Key moments</span>
+              </div>
+            )}
           </div>
         </div>
       </div>

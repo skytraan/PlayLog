@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from "react";
 import { ChatMessage, Sport } from "@/types/playlog";
-import { Send } from "lucide-react";
 import { FeedbackText } from "@/lib/timestamps";
 
 interface ChatInterfaceProps {
@@ -8,117 +7,160 @@ interface ChatInterfaceProps {
   onSend: (content: string) => void;
   sport: Sport;
   disabled?: boolean;
+  isSending?: boolean;
   presetPrompts?: string[];
-  /** When provided, timestamp tokens (m:ss) inside assistant replies become
-   *  buttons that seek the active video. */
   onSeek?: (seconds: number) => void;
+  sendError?: string | null;
 }
 
-export function ChatInterface({ messages, onSend, sport: _sport, disabled = false, presetPrompts = [], onSeek }: ChatInterfaceProps) {
+const SPORT_ICONS: Record<Sport, string> = {
+  tennis: "🎾",
+  golf: "⛳",
+  basketball: "🏀",
+};
+
+export function ChatInterface({
+  messages,
+  onSend,
+  sport,
+  disabled = false,
+  isSending = false,
+  presetPrompts = [],
+  onSeek,
+  sendError,
+}: ChatInterfaceProps) {
   const [input, setInput] = useState("");
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+  }, [messages, isSending]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim()) return;
+    if (!input.trim() || disabled) return;
     onSend(input.trim());
     setInput("");
   };
 
+  const sportIcon = SPORT_ICONS[sport] ?? "🏅";
+
   return (
-    <div className="border border-border rounded-lg bg-card">
-      <div className="px-4 py-3 border-b border-border">
-        <h3 className="text-sm font-semibold text-foreground">Ask your coach</h3>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          Ask questions about your gameplay across any session
-        </p>
+    <div
+      className="bg-card border border-border rounded-2xl flex flex-col"
+      style={{ height: "calc(100vh - 11rem)", maxHeight: 720, minHeight: 400 }}
+    >
+      {/* Header */}
+      <div className="px-4 py-3 border-b border-border flex items-center gap-3 flex-shrink-0">
+        <div className="w-8 h-8 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center text-base flex-shrink-0">
+          {sportIcon}
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-sm font-semibold text-foreground">Coach</h3>
+          <p className="text-[11px] text-muted-foreground">AI · trained on your sessions</p>
+        </div>
+        <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
       </div>
 
-      {messages.length === 0 && presetPrompts.length > 0 && (
-        <div className="px-4 py-4">
-          <div className="flex flex-wrap gap-2">
-            {presetPrompts.map((prompt) => (
-              <button
-                key={prompt}
-                onClick={() => onSend(prompt)}
-                className="px-3 py-1.5 text-xs font-medium text-muted-foreground bg-secondary rounded-full hover:text-foreground transition-colors"
-              >
-                {prompt}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {messages.length > 0 && (
-        <div className="max-h-96 overflow-y-auto px-4 py-4 space-y-4">
-          {messages.map((msg) => (
-            <div key={msg.id} className={`flex items-end gap-2 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-              {msg.role === "assistant" && (
-                <div className="flex-shrink-0 w-7 h-7 rounded-full bg-secondary border border-border flex items-center justify-center text-sm">
-                  🎾
-                </div>
-              )}
-              <div
-                className={`max-w-[80%] text-sm leading-relaxed rounded-2xl px-4 py-2.5 ${
-                  msg.role === "user"
-                    ? "bg-foreground text-background rounded-br-sm"
-                    : "bg-secondary text-foreground rounded-bl-sm"
-                }`}
-              >
-                {msg.role === "assistant" && (
-                  <p className="text-[10px] font-semibold text-primary uppercase tracking-wide mb-1">Coach</p>
-                )}
-                <div className="whitespace-pre-wrap">
-                  {msg.role === "assistant"
-                    ? <FeedbackText text={msg.content} onSeek={onSeek} />
-                    : msg.content}
-                </div>
-              </div>
-              {msg.role === "user" && (
-                <div className="flex-shrink-0 w-7 h-7 rounded-full bg-foreground border border-border flex items-center justify-center text-sm">
-                  👤
-                </div>
-              )}
+      {/* Messages */}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4 min-h-0">
+        {messages.length === 0 && !isSending && (
+          <div className="h-full flex flex-col items-center justify-center text-center gap-3 py-8">
+            <div className="w-12 h-12 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-2xl">
+              {sportIcon}
             </div>
-          ))}
-          <div ref={bottomRef} />
-        </div>
-      )}
-
-      <div className="border-t border-border px-4 py-3">
-        {messages.length > 0 && presetPrompts.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-3">
-            {presetPrompts.slice(0, 3).map((prompt) => (
-              <button
-                key={prompt}
-                onClick={() => onSend(prompt)}
-                className="px-2.5 py-1 text-xs text-muted-foreground bg-secondary rounded-full hover:text-foreground transition-colors"
-              >
-                {prompt}
-              </button>
-            ))}
+            <div>
+              <p className="text-sm font-medium text-foreground">Your AI coach is ready</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {disabled ? "Upload a video to start chatting" : "Ask anything about your technique"}
+              </p>
+            </div>
           </div>
         )}
+
+        {messages.map((msg) => {
+          const isUser = msg.role === "user";
+          return (
+            <div key={msg.id} className={`flex items-start gap-2.5 ${isUser ? "flex-row-reverse" : ""}`}>
+              <div
+                className={`w-7 h-7 rounded-full flex items-center justify-center text-sm flex-shrink-0 ${
+                  isUser ? "bg-secondary border border-border" : "bg-primary/15 border border-primary/30"
+                }`}
+              >
+                {isUser ? "👤" : sportIcon}
+              </div>
+              <div
+                className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
+                  isUser
+                    ? "bg-primary text-primary-foreground rounded-tr-sm"
+                    : "bg-secondary text-foreground rounded-tl-sm"
+                }`}
+              >
+                {msg.role === "assistant"
+                  ? <FeedbackText text={msg.content} onSeek={onSeek} />
+                  : msg.content}
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Thinking dots */}
+        {isSending && (
+          <div className="flex items-start gap-2.5">
+            <div className="w-7 h-7 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center text-sm flex-shrink-0">
+              {sportIcon}
+            </div>
+            <div className="bg-secondary rounded-2xl rounded-tl-sm px-3 py-2.5">
+              <div className="flex gap-1 items-center h-4">
+                {[0, 150, 300].map((delay) => (
+                  <span
+                    key={delay}
+                    className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce"
+                    style={{ animationDelay: `${delay}ms` }}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Preset prompts */}
+      {presetPrompts.length > 0 && (
+        <div className="px-4 py-3 border-t border-border flex-shrink-0">
+          <div className="flex flex-col gap-1.5 overflow-y-auto" style={{ maxHeight: "6.5rem", scrollbarWidth: "thin" }}>
+            {presetPrompts.map((p) => (
+              <button
+                key={p}
+                onClick={() => onSend(p)}
+                disabled={disabled}
+                className="text-xs text-left px-3 py-2 rounded-lg bg-secondary border border-border text-foreground/80 hover:text-foreground hover:border-primary/40 transition-colors disabled:opacity-40 leading-snug"
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Input */}
+      <div className="px-4 py-3 border-t border-border flex-shrink-0">
+        {sendError && <p className="text-xs text-destructive mb-2">{sendError}</p>}
         <form onSubmit={handleSubmit} className="flex items-center gap-2">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={disabled ? "Upload a video to start chatting…" : "Ask about your gameplay..."}
+            placeholder={disabled ? "Upload a video to start chatting…" : "Ask about your technique…"}
             disabled={disabled}
-            className="flex-1 bg-secondary rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 px-3 py-2 text-sm rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-50 disabled:cursor-not-allowed"
           />
           <button
             type="submit"
             disabled={disabled || !input.trim()}
-            className="p-2 rounded-md bg-foreground text-background disabled:opacity-30 hover:opacity-90 transition-opacity"
+            className="px-3 py-2 text-sm font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-30"
           >
-            <Send className="h-4 w-4" />
+            Send
           </button>
         </form>
       </div>
