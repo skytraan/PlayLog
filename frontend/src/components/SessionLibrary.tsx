@@ -1,50 +1,11 @@
 import { useState } from "react";
 import { Session, getRatingTier, ratingBarColor } from "@/types/playlog";
 import { ChevronDown } from "lucide-react";
+import { FeedbackText } from "@/lib/timestamps";
 
 interface SessionLibraryProps {
   sessions: Session[];
   onSeek?: (seconds: number) => void;
-}
-
-/** Parse "m:ss" or "h:mm:ss" timestamps from a string, return array of {label, seconds} */
-function extractTimestamps(text: string): Array<{ label: string; seconds: number }> {
-  const matches = [...text.matchAll(/\b(\d{1,2}):(\d{2})(?::(\d{2}))?\b/g)];
-  return matches.map((m) => {
-    const hasHours = m[3] !== undefined;
-    const hours   = hasHours ? parseInt(m[1]) : 0;
-    const minutes = hasHours ? parseInt(m[2]) : parseInt(m[1]);
-    const secs    = hasHours ? parseInt(m[3]) : parseInt(m[2]);
-    return { label: m[0], seconds: hours * 3600 + minutes * 60 + secs };
-  });
-}
-
-/** Render a feedback string with inline timestamp chips that call onSeek */
-function FeedbackText({ text, onSeek }: { text: string; onSeek?: (s: number) => void }) {
-  if (!onSeek) return <span>{text}</span>;
-
-  const timestamps = extractTimestamps(text);
-  if (timestamps.length === 0) return <span>{text}</span>;
-
-  const parts: React.ReactNode[] = [];
-  let cursor = 0;
-  for (const ts of timestamps) {
-    const idx = text.indexOf(ts.label, cursor);
-    if (idx > cursor) parts.push(text.slice(cursor, idx));
-    parts.push(
-      <button
-        key={idx}
-        onClick={() => onSeek(ts.seconds)}
-        className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-mono bg-primary/10 text-primary hover:bg-primary/20 transition-colors mx-0.5"
-      >
-        {ts.label}
-      </button>
-    );
-    cursor = idx + ts.label.length;
-  }
-  if (cursor < text.length) parts.push(text.slice(cursor));
-
-  return <span>{parts}</span>;
 }
 
 export function SessionLibrary({ sessions, onSeek }: SessionLibraryProps) {

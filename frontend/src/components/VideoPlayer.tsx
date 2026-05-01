@@ -7,26 +7,35 @@ export interface VideoPlayerHandle {
 }
 
 interface VideoPlayerProps {
-  file: File;
+  /** Local file (immediately after upload). One of file/src is required. */
+  file?: File;
+  /** Remote URL (e.g. R2 presigned read URL) — used after a reload when the
+   *  original File object is no longer in memory. */
+  src?: string;
   /** Optional list of cue points to mark on the progress bar (in seconds) */
   cues?: number[];
 }
 
 export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
-  ({ file, cues = [] }, ref) => {
+  ({ file, src, cues = [] }, ref) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const [playing, setPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
-    const objectUrl = useRef<string | null>(null);
 
-    // Create object URL once per file
+    // Two source modes: local File (createObjectURL + revoke), or a plain URL
+    // string (just set src directly). The else-branch lets the player rehydrate
+    // a session's R2 video after the user reloads the page or navigates back.
     useEffect(() => {
-      const url = URL.createObjectURL(file);
-      objectUrl.current = url;
-      if (videoRef.current) videoRef.current.src = url;
-      return () => URL.revokeObjectURL(url);
-    }, [file]);
+      if (file) {
+        const url = URL.createObjectURL(file);
+        if (videoRef.current) videoRef.current.src = url;
+        return () => URL.revokeObjectURL(url);
+      }
+      if (src && videoRef.current) {
+        videoRef.current.src = src;
+      }
+    }, [file, src]);
 
     useImperativeHandle(ref, () => ({
       seekTo(seconds: number) {
