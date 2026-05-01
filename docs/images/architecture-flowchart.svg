@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 1320" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#475569"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1100" height="1320" fill="#fafaf9"/>
+
+  <!-- Title -->
+  <text x="550" y="44" text-anchor="middle" font-size="22" font-weight="700" fill="#0f172a">PlayLog · Video → Coaching Pipeline</text>
+  <text x="550" y="72" text-anchor="middle" font-size="13" fill="#64748b">Browser-side pose scoring + server-side LLM grounding, joined by an authoritative timeline</text>
+
+  <!-- ============================================ -->
+  <!-- STEP 1: Upload                               -->
+  <!-- ============================================ -->
+  <rect x="350" y="110" width="400" height="80" rx="10" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="550" y="138" text-anchor="middle" font-size="14" font-weight="700" fill="#1e3a8a">1 · User uploads video</text>
+  <text x="550" y="158" text-anchor="middle" font-size="11" fill="#475569">UploadArea.tsx · file picker / drag-drop</text>
+  <text x="550" y="174" text-anchor="middle" font-size="11" fill="#475569">requests a presigned PUT URL from the server</text>
+
+  <!-- arrow 1 → 2 -->
+  <line x1="550" y1="190" x2="550" y2="222" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="565" y="212" font-size="10" fill="#475569">presigned URL</text>
+
+  <!-- ============================================ -->
+  <!-- STEP 2: R2 upload                            -->
+  <!-- ============================================ -->
+  <rect x="350" y="225" width="400" height="80" rx="10" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="550" y="253" text-anchor="middle" font-size="14" font-weight="700" fill="#78350f">2 · Bytes uploaded directly to Cloudflare R2</text>
+  <text x="550" y="273" text-anchor="middle" font-size="11" fill="#475569">videos/&lt;uuid&gt; key · S3-compatible PUT · zero-egress storage</text>
+  <text x="550" y="289" text-anchor="middle" font-size="11" fill="#475569">browser → R2 directly · no proxy through our backend</text>
+
+  <!-- split arrow: 2 → 3a (browser) and 2 → 3b (server) -->
+  <line x1="550" y1="305" x2="550" y2="335" stroke="#475569" stroke-width="1.5"/>
+  <line x1="250" y1="335" x2="850" y2="335" stroke="#475569" stroke-width="1.5"/>
+  <line x1="250" y1="335" x2="250" y2="368" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="850" y1="335" x2="850" y2="368" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="550" y="328" text-anchor="middle" font-size="10" font-weight="600" fill="#475569">storage key persisted on session row · two consumers in parallel</text>
+
+  <!-- ============================================ -->
+  <!-- STEP 3a: MediaPipe (left)  /  3b: TwelveLabs (right) -->
+  <!-- ============================================ -->
+  <rect x="50" y="370" width="400" height="180" rx="10" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="250" y="397" text-anchor="middle" font-size="14" font-weight="700" fill="#1e3a8a">3A · Browser · MediaPipe Pose Scoring</text>
+  <text x="250" y="418" text-anchor="middle" font-size="11" fill="#475569">scoring-guides/{forehand,backhand,serve,…}-scorer.ts</text>
+  <text x="250" y="434" text-anchor="middle" font-size="11" fill="#475569">scorer-utils.ts · runScoringPipeline()</text>
+  <text x="250" y="464" text-anchor="middle" font-size="11" fill="#1e3a8a">• Sample frames at 2 fps</text>
+  <text x="250" y="482" text-anchor="middle" font-size="11" fill="#1e3a8a">• Phase classifier per frame (preparation → impact)</text>
+  <text x="250" y="500" text-anchor="middle" font-size="11" fill="#1e3a8a">• Emit BEST and WORST keyFrame per phase</text>
+  <text x="250" y="528" text-anchor="middle" font-size="10" font-style="italic" fill="#3b82f6">runs 100% client-side · no server compute</text>
+
+  <rect x="650" y="370" width="400" height="180" rx="10" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="850" y="397" text-anchor="middle" font-size="14" font-weight="700" fill="#78350f">3B · Server · TwelveLabs Pegasus 1.2</text>
+  <text x="850" y="418" text-anchor="middle" font-size="11" fill="#475569">routes/twelvelabs.ts · services/twelvelabs.ts</text>
+  <text x="850" y="434" text-anchor="middle" font-size="11" fill="#475569">POST /v1.3/analyze (sync, direct URL)</text>
+  <text x="850" y="464" text-anchor="middle" font-size="11" fill="#78350f">• { video: { type:"url", url: r2.dev/&lt;key&gt; }, prompt }</text>
+  <text x="850" y="482" text-anchor="middle" font-size="11" fill="#78350f">• Returns text describing technique + timestamps</text>
+  <text x="850" y="500" text-anchor="middle" font-size="11" fill="#78350f">• 5–15 sec typical (vs 30–90 sec when indexed)</text>
+  <text x="850" y="528" text-anchor="middle" font-size="10" font-style="italic" fill="#d97706">collapsed index → poll → analyze into one HTTP call</text>
+
+  <!-- arrows from 3a/3b → 4 -->
+  <line x1="250" y1="550" x2="250" y2="600" stroke="#475569" stroke-width="1.5"/>
+  <line x1="850" y1="550" x2="850" y2="600" stroke="#475569" stroke-width="1.5"/>
+  <line x1="250" y1="600" x2="850" y2="600" stroke="#475569" stroke-width="1.5"/>
+  <line x1="550" y1="600" x2="550" y2="630" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="252" y="595" font-size="10" fill="#475569">poseAnalysis JSON (keyFrames + scores)</text>
+  <text x="848" y="595" text-anchor="end" font-size="10" fill="#475569">Pegasus text (free-form + timestamps)</text>
+
+  <!-- ============================================ -->
+  <!-- STEP 4: Timeline builder                     -->
+  <!-- ============================================ -->
+  <rect x="200" y="635" width="700" height="130" rx="10" fill="#dcfce7" stroke="#10b981" stroke-width="2"/>
+  <text x="550" y="664" text-anchor="middle" font-size="14" font-weight="700" fill="#064e3b">4 · Server builds the Authoritative Timeline ⭐</text>
+  <text x="550" y="684" text-anchor="middle" font-size="11" fill="#475569">server/src/lib/timeline.ts · buildTimeline()</text>
+  <text x="550" y="708" text-anchor="middle" font-size="11" fill="#064e3b">Merge pose keyFrames (frame-accurate) + Pegasus mentions (fallback anchors)</text>
+  <text x="550" y="724" text-anchor="middle" font-size="11" fill="#064e3b">Dedupe within ±1s · pose source wins on tie</text>
+  <text x="550" y="748" text-anchor="middle" font-size="11" font-style="italic" fill="#059669">→ a single ordered list of seconds Claude is allowed to reference</text>
+
+  <!-- arrow 4 → 5 -->
+  <line x1="550" y1="765" x2="550" y2="797" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="565" y="787" font-size="10" fill="#475569">timeline.seconds[] + formatTimelineForPrompt()</text>
+
+  <!-- ============================================ -->
+  <!-- STEP 5: Coach (Claude)                       -->
+  <!-- ============================================ -->
+  <rect x="200" y="800" width="700" height="155" rx="10" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="550" y="828" text-anchor="middle" font-size="14" font-weight="700" fill="#78350f">5 · Anthropic Claude Haiku 4.5 generates feedback</text>
+  <text x="550" y="848" text-anchor="middle" font-size="11" fill="#475569">routes/coach.ts · /generateFeedback (one-shot) and /askCoach (chat)</text>
+  <text x="550" y="872" text-anchor="middle" font-size="11" fill="#78350f">• Prompt: "Reference ONLY moments from this timeline"</text>
+  <text x="550" y="890" text-anchor="middle" font-size="11" fill="#78350f">• messages.parse() with JSON-schema · Zod-validated reply</text>
+  <text x="550" y="908" text-anchor="middle" font-size="11" fill="#78350f">• Replies cite BEST and WORST exemplars per phase</text>
+  <text x="550" y="936" text-anchor="middle" font-size="10" font-style="italic" fill="#d97706">replaced Gemini after billing flake · structured output kills regex parsing</text>
+
+  <!-- arrow 5 → 6 -->
+  <line x1="550" y1="955" x2="550" y2="987" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="565" y="977" font-size="10" fill="#475569">summary, strengths, improvements, drills (with timestamps)</text>
+
+  <!-- ============================================ -->
+  <!-- STEP 6: Snap + persist                        -->
+  <!-- ============================================ -->
+  <rect x="200" y="990" width="700" height="125" rx="10" fill="#dcfce7" stroke="#10b981" stroke-width="1.5"/>
+  <text x="550" y="1018" text-anchor="middle" font-size="14" font-weight="700" fill="#064e3b">6 · Snap timestamps → persist to Postgres</text>
+  <text x="550" y="1038" text-anchor="middle" font-size="11" fill="#475569">snapTimestampsInText() · porsager/postgres tagged-template SQL</text>
+  <text x="550" y="1062" text-anchor="middle" font-size="11" fill="#064e3b">• Every m:ss in Claude's reply → nearest authoritative second (within ±2s)</text>
+  <text x="550" y="1080" text-anchor="middle" font-size="11" fill="#064e3b">• Out-of-tolerance timestamps left untouched (caller logs)</text>
+  <text x="550" y="1098" text-anchor="middle" font-size="11" fill="#064e3b">• Stored in feedback table · message log appended for chat turns</text>
+
+  <!-- arrow 6 → 7 -->
+  <line x1="550" y1="1115" x2="550" y2="1147" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="565" y="1137" font-size="10" fill="#475569">feedback row id</text>
+
+  <!-- ============================================ -->
+  <!-- STEP 7: UI render                             -->
+  <!-- ============================================ -->
+  <rect x="200" y="1150" width="700" height="120" rx="10" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="550" y="1178" text-anchor="middle" font-size="14" font-weight="700" fill="#1e3a8a">7 · Frontend renders feedback with clickable timestamp chips</text>
+  <text x="550" y="1198" text-anchor="middle" font-size="11" fill="#475569">FeedbackText (timestamps.tsx) · ChatInterface · SessionLibrary</text>
+  <text x="550" y="1222" text-anchor="middle" font-size="11" fill="#1e3a8a">• Each m:ss in feedback becomes a button that seeks the player</text>
+  <text x="550" y="1240" text-anchor="middle" font-size="11" fill="#1e3a8a">• Active session persisted in localStorage · survives reload + tab switch</text>
+  <text x="550" y="1258" text-anchor="middle" font-size="11" fill="#1e3a8a">• Coach chat continues against the same grounded timeline</text>
+
+  <!-- Footer -->
+  <text x="550" y="1300" text-anchor="middle" font-size="10" fill="#64748b">Three independent clouds (Vercel · Railway · Cloudflare) joined by URLs and env vars · No vendor lock-in for the data path</text>
+</svg>
