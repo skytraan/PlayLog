@@ -23,5 +23,5 @@ export const env = {
   },
 
   twelvelabsApiKey: optional("TWELVELABS_API_KEY"),
-  geminiApiKey: optional("GEMINI_API_KEY"),
+  anthropicApiKey: optional("ANTHROPIC_API_KEY"),
 };

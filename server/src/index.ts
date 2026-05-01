@@ -11,7 +11,7 @@ import { goals } from "./routes/goals.js";
 import { badges } from "./routes/badges.js";
 import { storage } from "./routes/storage.js";
 import { twelvelabs } from "./routes/twelvelabs.js";
-import { gemini } from "./routes/gemini.js";
+import { coach } from "./routes/coach.js";
 
 export const app = new Hono();
 
@@ -31,7 +31,7 @@ app.route("/api/goals",      goals);
 app.route("/api/badges",     badges);
 app.route("/api/storage",    storage);
 app.route("/api/twelvelabs", twelvelabs);
-app.route("/api/gemini",     gemini);
+app.route("/api/coach",      coach);
 
 // In test/import mode the entry file is loaded but we skip listen.
 if (process.env.NODE_ENV !== "test" && !process.env.SKIP_LISTEN) {

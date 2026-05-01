@@ -13,7 +13,7 @@ interface LearnProps {
 }
 
 export function Learn({ sport, userId }: LearnProps) {
-  const askCoach = useAction(api.gemini.askCoach);
+  const askCoach = useAction(api.coach.askCoach);
   const videoPlayerRef = useRef<VideoPlayerHandle>(null);
 
   const { status, error, sessionId, currentVideo, analyze, reset } = useVideoAnalysis({

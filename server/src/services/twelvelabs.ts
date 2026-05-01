@@ -52,7 +52,9 @@ export async function getOrCreateIndex(sport: string): Promise<string> {
     method: "POST",
     body: JSON.stringify({
       index_name: indexName,
-      models: [{ model_name: "pegasus1.2", options: ["visual"] }],
+      // v1.3 renamed the field from `options` to `model_options`. Sending
+      // the wrong key makes TwelveLabs see zero options and reject the index.
+      models: [{ model_name: "pegasus1.2", model_options: ["visual", "audio"] }],
     }),
   })) as { _id: string };
 

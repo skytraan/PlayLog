@@ -72,7 +72,7 @@ export function useVideoAnalysis({
   const createAnalysis = useMutation(api.analyses.createAnalysis);
   const updateAnalysis = useMutation(api.analyses.updateAnalysis);
   const analyzeVideo = useAction(api.twelvelabs.analyzeVideo);
-  const generateFeedback = useAction(api.gemini.generateFeedback);
+  const generateFeedback = useAction(api.coach.generateFeedback);
   const checkAndAwardBadges = useMutation(api.badges.checkAndAwardBadges);
 
   const analyze = useCallback(

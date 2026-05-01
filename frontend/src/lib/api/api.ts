@@ -180,14 +180,14 @@ export const api = {
     >("twelvelabs", "analyzeVideo"),
   },
 
-  gemini: {
+  coach: {
     generateFeedback: defAction<
       { sessionId: Id<"sessions">; analysisId: Id<"analyses"> },
       Id<"feedback">
-    >("gemini", "generateFeedback"),
+    >("coach", "generateFeedback"),
     askCoach: defAction<
       { sessionId: Id<"sessions">; userMessage: string },
       string
-    >("gemini", "askCoach"),
+    >("coach", "askCoach"),
   },
 };
