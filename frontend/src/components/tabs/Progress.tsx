@@ -9,13 +9,21 @@ import { ProgressTimeline } from "@/components/ProgressTimeline";
 import { TENNIS_SKILLS, getLevelTitle } from "@/types/playlog";
 import { ALL_TENNIS_BADGES } from "@/data/mockData";
 
+const INITIAL_OVR: Record<string, number> = {
+  beginner: 30,
+  developing: 50,
+  proficient: 70,
+  elite: 85,
+};
+
 interface ProgressProps {
   userId: Id<"users">;
   userName: string;
+  initialLevel?: string;
 }
 
 
-export function Progress({ userId, userName }: ProgressProps) {
+export function Progress({ userId, userName, initialLevel }: ProgressProps) {
   const rawSessions = useQuery(api.sessions.listSessionsWithFeedback, { userId });
 
   if (rawSessions === undefined) return <ProgressSkeleton />;
@@ -23,7 +31,11 @@ export function Progress({ userId, userName }: ProgressProps) {
   const sessions = rawSessions;
   const totalSessions = sessions.length;
 
-  if (totalSessions === 0) return <ProgressEmptyState />;
+  if (totalSessions === 0) {
+    const ovr = initialLevel ? (INITIAL_OVR[initialLevel] ?? 0) : 0;
+    const placeholderRatings = { serve: ovr || null, forehand: ovr || null, backhand: ovr || null, volley: ovr || null, footwork: ovr || null };
+    return <ProgressPlaceholder userId={userId} userName={userName} ovr={ovr} ratings={placeholderRatings} />;
+  }
 
   const earnedBadges = (useQuery(api.badges.getUserBadges, { userId }) ?? []).map((b) => ({
     id: b.badgeId,
@@ -162,13 +174,47 @@ function ProgressSkeleton() {
   );
 }
 
-function ProgressEmptyState() {
+function ProgressPlaceholder({
+  userId,
+  userName,
+  ovr,
+  ratings,
+}: {
+  userId: Id<"users">;
+  userName: string;
+  ovr: number;
+  ratings: { serve: number | null; forehand: number | null; backhand: number | null; volley: number | null; footwork: number | null };
+}) {
   return (
-    <div className="text-center py-16 space-y-2">
-      <p className="text-sm font-medium text-foreground">No sessions yet</p>
-      <p className="text-xs text-muted-foreground">
-        Upload a video on the Learn tab to start tracking your progress.
-      </p>
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-[auto_1fr] gap-6 items-stretch">
+        <div
+          className="border border-border rounded-2xl p-4 flex items-center justify-center"
+          style={{ background: "radial-gradient(ellipse at top, hsl(153 60% 12%), hsl(222 20% 8%) 65%)" }}
+        >
+          <FifaPlayerCard name={userName} ratings={ratings} />
+        </div>
+        <div className="flex-1">
+          <OvrGoal
+            userId={userId}
+            currentOvr={ovr}
+            totalSessions={0}
+            streak={0}
+            earnedBadgesCount={0}
+            totalBadges={ALL_TENNIS_BADGES.length}
+          />
+        </div>
+      </div>
+      <ActiveChallenge
+        challenge="Upload your first session and get a complete skill breakdown from your AI coach"
+        setDate={null}
+      />
+      <div className="border border-border rounded-2xl px-5 py-8 text-center space-y-1.5">
+        <p className="text-sm font-medium text-foreground">These are your starting stats</p>
+        <p className="text-xs text-muted-foreground">
+          Upload a video on the Learn tab — your first session will replace these with real scores.
+        </p>
+      </div>
     </div>
   );
 }

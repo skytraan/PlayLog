@@ -175,15 +175,15 @@ export function OvrGoal({
 
         {savedGoal && !editing && (
           <div className="flex flex-col gap-4 flex-1">
-            {/* Target + deadline */}
+            {/* Current + Goal */}
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">OVR Goal</p>
-                <p className="text-2xl font-bold font-mono text-foreground mt-0.5">{savedGoal.targetOvr}</p>
-              </div>
-              <div className="text-right">
                 <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Current</p>
                 <p className="text-2xl font-bold font-mono text-primary mt-0.5">{currentOvr || "—"}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">OVR Goal</p>
+                <p className="text-2xl font-bold font-mono text-foreground mt-0.5">{savedGoal.targetOvr}</p>
               </div>
             </div>
 

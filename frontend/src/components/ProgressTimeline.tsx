@@ -61,7 +61,7 @@ export function ProgressTimeline({ data = [], delta }: ProgressTimelineProps) {
       {!hasData ? (
         <div className="flex-1 flex items-center justify-center min-h-[120px]">
           <p className="text-sm text-muted-foreground text-center">
-            No sessions yet. Upload your first session to start tracking progress.
+            Not enough sessions. Upload two sessions to start tracking.
           </p>
         </div>
       ) : (

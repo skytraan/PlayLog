@@ -7,6 +7,7 @@ export interface UserProfile {
   name: string;
   email: string;
   sport: "tennis";
+  level?: string;
 }
 
 interface OnboardingProps {
@@ -22,11 +23,13 @@ const SPORTS = [
 ];
 
 const LEVELS = [
-  { id: "beginner",   label: "Just picked it up", desc: "Less than a year of regular play",       ovr: "~30" },
-  { id: "developing", label: "Recreational",       desc: "Play casually most weeks",              ovr: "~50" },
-  { id: "proficient", label: "Club player",        desc: "Competitive in club leagues or ladders", ovr: "~70" },
-  { id: "elite",      label: "Tournament player",  desc: "Compete at sectional level or higher",  ovr: "~85" },
+  { id: "beginner",   label: "Just picked it up", desc: "Less than a year of regular play",        ovr: "~30", ovrNum: 30 },
+  { id: "developing", label: "Recreational",       desc: "Play casually most weeks",               ovr: "~50", ovrNum: 50 },
+  { id: "proficient", label: "Club player",        desc: "Competitive in club leagues or ladders", ovr: "~70", ovrNum: 70 },
+  { id: "elite",      label: "Tournament player",  desc: "Compete at sectional level or higher",   ovr: "~85", ovrNum: 85 },
 ];
+
+const LEVEL_OVR: Record<string, number> = Object.fromEntries(LEVELS.map((l) => [l.id, l.ovrNum]));
 
 // ── Shared sub-components ─────────────────────────────────────────────────────
 
@@ -285,6 +288,9 @@ function StepLevel({
 // ── Right branding panel ──────────────────────────────────────────────────────
 
 function BrandPanel({ data }: { data: StepData }) {
+  const ovr = data.level ? (LEVEL_OVR[data.level] ?? 50) : 50;
+  const ratings = { serve: ovr, forehand: ovr, backhand: ovr, volley: ovr, footwork: ovr };
+
   return (
     <div className="flex flex-col justify-between h-full">
       <div>
@@ -297,7 +303,7 @@ function BrandPanel({ data }: { data: StepData }) {
         <div className="mt-10">
           <FifaPlayerCard
             name={data.name || "Alex Chen"}
-            ratings={{ serve: 72, forehand: 74, backhand: 58, volley: 62, footwork: 70 }}
+            ratings={ratings}
           />
         </div>
       </div>
@@ -348,7 +354,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
           email: data.email.trim(),
           sports: ["tennis"],
         });
-        onComplete({ userId, name: data.name.trim(), email: data.email.trim(), sport: "tennis" });
+        onComplete({ userId, name: data.name.trim(), email: data.email.trim(), sport: "tennis", level: data.level ?? undefined });
       } catch (err) {
         setSubmitError(err instanceof Error ? err.message : "Failed to create account. Please try again.");
         setSubmitting(false);

@@ -1,13 +1,9 @@
-import { useState } from "react";
-
 interface ActiveChallengeProps {
   challenge: string;
   setDate: string | null;
 }
 
 export function ActiveChallenge({ challenge, setDate }: ActiveChallengeProps) {
-  const [accepted, setAccepted] = useState(false);
-
   return (
     <div
       className="border border-emerald-900/60 rounded-2xl px-5 py-4 flex items-center gap-4"
@@ -27,16 +23,6 @@ export function ActiveChallenge({ challenge, setDate }: ActiveChallengeProps) {
         </div>
         <p className="text-sm text-foreground truncate">{challenge}</p>
       </div>
-      <button
-        onClick={() => setAccepted((a) => !a)}
-        className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all flex-shrink-0 ${
-          accepted
-            ? "bg-primary text-primary-foreground"
-            : "bg-foreground/10 text-foreground hover:bg-foreground/20"
-        }`}
-      >
-        {accepted ? "✓ Accepted" : "Accept"}
-      </button>
     </div>
   );
 }
