@@ -94,29 +94,27 @@ The frontend talks to the backend over a small RPC convention: every endpoint is
 
 ## Quickstart
 
-**Prerequisites:** Node ≥ 20.12, a Postgres database, a Cloudflare R2 bucket with a token, a TwelveLabs API key, an Anthropic API key.
+**Prerequisites:** Node ≥ 20.12 and a local Postgres 14+. Cloudflare R2, TwelveLabs, and Anthropic keys are needed only for the AI pipeline — the rest of the app (auth, in-browser pose scoring, session list) runs fine without them.
 
 ```bash
-# 1. Clone and install
 git clone https://github.com/skytraan/PlayLog.git
 cd PlayLog
-npm --prefix server   install
-npm --prefix frontend install
-
-# 2. Configure
-cp server/.env.example server/.env
-cp frontend/.env.example frontend/.env
-# fill in the values (see Configuration below)
-
-# 3. Initialise the database
-npm --prefix server run migrate
-
-# 4. Run both dev servers (in separate terminals)
-npm run backend     # Hono on http://localhost:8787
-npm run frontend    # Vite on http://localhost:8080
+npm run setup       # installs deps, scaffolds .env from examples, creates DB, runs migrations
+npm run dev         # backend on :8787, frontend on :8080
 ```
 
-Open `http://localhost:8080`, complete onboarding, upload a clip — analysis should complete in 10–25 seconds end-to-end.
+Open `http://localhost:8080`. To enable video uploads + AI analysis, edit `server/.env` and fill in the R2 / TwelveLabs / Anthropic values (see [Configuration](#configuration)).
+
+If you'd rather do the steps yourself:
+
+```bash
+npm --prefix server install && npm --prefix frontend install
+cp server/.env.example server/.env && cp frontend/.env.example frontend/.env
+# edit server/.env → DATABASE_URL points at your Postgres
+npm --prefix server run migrate
+npm run backend     # Hono on http://localhost:8787
+npm run frontend    # Vite on http://localhost:8080  (separate terminal)
+```
 
 ---
 

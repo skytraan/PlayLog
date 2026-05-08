@@ -35,18 +35,22 @@ function classifyPhase(
   const rightHip   = lm[L.RIGHT_HIP];
 
   const domAnkle  = lm[isRight ? L.RIGHT_ANKLE : L.LEFT_ANKLE];
-  const domKnee   = lm[isRight ? L.RIGHT_KNEE  : L.LEFT_KNEE];
+  const domKnee   = isRight ? rightKnee : leftKnee;
   const domHip    = lm[isRight ? L.RIGHT_HIP   : L.LEFT_HIP];
   const offAnkle  = lm[isRight ? L.LEFT_ANKLE  : L.RIGHT_ANKLE];
+  const offKnee   = isRight ? leftKnee : rightKnee;
+  const offHip    = lm[isRight ? L.LEFT_HIP    : L.RIGHT_HIP];
 
   // Ankle symmetry: split step = both ankles at nearly the same y height
   const ankleDiff = Math.abs(leftAnkle.y - rightAnkle.y);
   const splitStepSymmetry = ankleDiff < 0.05;
 
-  // Knee bend depth: compare knee y gap to hip-ankle span
-  const kneeSpan = Math.abs(domKnee.y - domHip.y);
-  const legSpan  = Math.abs(domAnkle.y - domHip.y);
-  const deepKneeBend = kneeSpan < legSpan * 0.45; // knee is high relative to leg = bent
+  // Bilateral knee bend: a real split-step lands with both knees bent.
+  // Single-side bend on landing is a false-positive we previously accepted.
+  const isBent = (knee: typeof domKnee, hip: typeof domHip, ankle: typeof domAnkle) =>
+    Math.abs(knee.y - hip.y) < Math.abs(ankle.y - hip.y) * 0.45;
+  const deepKneeBend = isBent(domKnee, domHip, domAnkle);
+  const bothKneesBent = deepKneeBend && isBent(offKnee, offHip, offAnkle);
 
   // Hip lateral displacement: is the body shifted toward the dominant side
   const hipMidX = (leftHip.x + rightHip.x) / 2;
@@ -59,7 +63,7 @@ function classifyPhase(
   const feetWidth = Math.abs(leftAnkle.x - rightAnkle.x);
   const wideStance = feetWidth > 0.25;
 
-  if (splitStepSymmetry && deepKneeBend)             return "preparation";
+  if (splitStepSymmetry && bothKneesBent)            return "preparation";
   if (!splitStepSymmetry && deepKneeBend && !wideStance) return "backswing";
   if (!splitStepSymmetry && bodyShiftedToDomSide && !wideStance) return "forward_swing";
   if (wideStance && domFootAhead)                    return "impact";

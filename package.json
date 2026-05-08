@@ -4,8 +4,12 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "setup": "bash scripts/setup.sh",
+    "dev": "npm --prefix server run dev & npm --prefix frontend run dev; wait",
     "backend": "npm --prefix server run dev",
     "frontend": "npm --prefix frontend run dev",
+    "build": "npm --prefix server run build && npm --prefix frontend run build",
+    "typecheck": "npm --prefix server run typecheck && npm --prefix frontend run typecheck",
     "migrate": "npm --prefix server run migrate",
     "test": "npm --prefix server run test"
   }

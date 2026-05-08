@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from "react";
-import type { PoseLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
+import type { PoseLandmarker } from "@mediapipe/tasks-vision";
 
 export interface PoseLandmark {
   x: number;
@@ -34,7 +34,7 @@ export function useMediaPipe(): UseMediaPipeResult {
 
       const { PoseLandmarker } = await import("@mediapipe/tasks-vision");
 
-      const landmarker = await PoseLandmarker.createFromOptions(vision as FilesetResolver, {
+      const landmarker = await PoseLandmarker.createFromOptions(vision, {
         baseOptions: {
           modelAssetPath:
             "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",

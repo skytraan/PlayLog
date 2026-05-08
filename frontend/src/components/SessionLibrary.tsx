@@ -80,7 +80,7 @@ export function SessionLibrary({
         </div>
       ) : (
         <div className="divide-y divide-border">
-          {sorted.map((session, i) => {
+          {sorted.map((session) => {
             const isActive = session.id === activeSessionId;
             const isOpen = openIds.has(session.id);
             const globalIndex = sessions.indexOf(session);
